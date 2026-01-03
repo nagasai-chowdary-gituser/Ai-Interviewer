@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interviewer Avatar - Design Concept</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0d0d2a 100%);
+            min-height: 100vh;
+            color: #e0e0ff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #9ca3af;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+        }
+
+        .design-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .avatar-preview {
+            background: linear-gradient(180deg, #1a1a3a 0%, #0d0d2a 100%);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: 0 0 60px rgba(139, 92, 246, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 600px;
+        }
+
+        .avatar-frame {
+            width: 350px;
+            height: 450px;
+            background: linear-gradient(180deg, #252545 0%, #1a1a35 100%);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(139, 92, 246, 0.4);
+            box-shadow: 
+                inset 0 0 80px rgba(139, 92, 246, 0.1),
+                0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Avatar Character - CSS Art Representation */
+        .avatar-character {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Head */
+        .head {
+            position: absolute;
+            width: 120px;
+            height: 145px;
+            background: linear-gradient(180deg, #f5d0b5 0%, #e8c4a6 50%, #dbb89a 100%);
+            border-radius: 50% 50% 45% 45%;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 
+                inset -15px -10px 30px rgba(0,0,0,0.1),
+                0 5px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Hair - Modern Professional Style */
+        .hair {
+            position: absolute;
+            width: 135px;
+            height: 90px;
+            background: linear-gradient(180deg, #2a2a3a 0%, #1a1a2a 100%);
+            border-radius: 50% 50% 30% 30%;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        .hair::before {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 25px;
+            background: #2a2a3a;
+            top: 60px;
+            left: -8px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .hair::after {
+            content: '';
+            position: absolute;
+            width: 50px;
+            height: 25px;
+            background: #2a2a3a;
+            top: 60px;
+            right: -8px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        /* Eyes */
+        .eyes {
+            position: absolute;
+            top: 115px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 35px;
+        }
+
+        .eye {
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .eye::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            border-radius: 50%;
+            top: 6px;
+            left: 6px;
+        }
+
+        .eye::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+            top: 8px;
+            left: 8px;
+        }
+
+        /* Eyebrows */
+        .eyebrows {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 55px;
+        }
+
+        .eyebrow {
+            width: 30px;
+            height: 5px;
+            background: #2a2a3a;
+            border-radius: 3px;
+            transform: rotate(-5deg);
+        }
+
+        .eyebrow:last-child {
+            transform: rotate(5deg);
+        }
+
+        /* Nose */
+        .nose {
+            position: absolute;
+            top: 145px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 25px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent);
+        }
+
+        .nose::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 8px;
+            border-radius: 50%;
+            box-shadow: 0 3px 3px rgba(0,0,0,0.08);
+        }
+
+        /* Mouth - Speaking State */
+        .mouth {
+            position: absolute;
+            top: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 35px;
+            height: 12px;
+            background: linear-gradient(180deg, #c9826a 0%, #a85d45 100%);
+            border-radius: 0 0 50% 50%;
+            animation: speak 0.3s ease-in-out infinite alternate;
+        }
+
+        @keyframes speak {
+            0% { height: 8px; width: 32px; }
+            100% { height: 16px; width: 38px; }
+        }
+
+        /* Neck */
+        .neck {
+            position: absolute;
+            width: 55px;
+            height: 50px;
+            background: linear-gradient(180deg, #dbb89a 0%, #d4b090 100%);
+            top: 195px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* Body - Professional Suit */
+        .body {
+            position: absolute;
+            top: 235px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 250px;
+        }
+
+        .suit {
+            position: absolute;
+            width: 200px;
+            height: 220px;
+            background: linear-gradient(180deg, #1a1a3a 0%, #0d0d2a 100%);
+            border-radius: 30px 30px 0 0;
+            box-shadow: 
+                inset 5px 0 15px rgba(255,255,255,0.05),
+                inset -5px 0 15px rgba(0,0,0,0.2);
+        }
+
+        /* Suit Lapels */
+        .lapel-left {
+            position: absolute;
+            top: 0;
+            left: 35px;
+            width: 60px;
+            height: 100px;
+            background: linear-gradient(135deg, #252545 0%, #1a1a35 100%);
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 60%);
+        }
+
+        .lapel-right {
+            position: absolute;
+            top: 0;
+            right: 35px;
+            width: 60px;
+            height: 100px;
+            background: linear-gradient(225deg, #252545 0%, #1a1a35 100%);
+            clip-path: polygon(0 0, 100% 0, 50% 60%, 0 100%);
+        }
+
+        /* Shirt */
+        .shirt {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 120px;
+            background: linear-gradient(180deg, #e8e8f0 0%, #d8d8e8 100%);
+        }
+
+        /* Tie */
+        .tie {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #8b5cf6;
+        }
+
+        .tie::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -10px;
+            width: 20px;
+            height: 80px;
+            background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
+            clip-path: polygon(50% 0, 100% 0, 80% 100%, 20% 100%, 0 0);
+        }
+
+        /* Shoulders */
+        .shoulder-left {
+            position: absolute;
+            top: 0;
+            left: -25px;
+            width: 70px;
+            height: 60px;
+            background: linear-gradient(90deg, #1a1a3a, #252545);
+            border-radius: 30px 0 0 0;
+        }
+
+        .shoulder-right {
+            position: absolute;
+            top: 0;
+            right: -25px;
+            width: 70px;
+            height: 60px;
+            background: linear-gradient(-90deg, #1a1a3a, #252545);
+            border-radius: 0 30px 0 0;
+        }
+
+        /* Glow Effects */
+        .glow-ring {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 50%;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+                opacity: 0.5;
+            }
+            50% { 
+                box-shadow: 0 0 40px rgba(139, 92, 246, 0.4);
+                opacity: 1;
+            }
+        }
+
+        /* Status Indicator */
+        .status-badge {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #22c55e;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: blink-dot 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .avatar-label {
+            margin-top: 25px;
+            font-size: 1.2rem;
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        /* Specifications Panel */
+        .specs-panel {
+            background: rgba(26, 26, 58, 0.8);
+            border-radius: 24px;
+            padding: 35px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .specs-panel h2 {
+            color: #a78bfa;
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spec-section {
+            margin-bottom: 25px;
+        }
+
+        .spec-section h3 {
+            color: #8b5cf6;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .spec-list {
+            list-style: none;
+        }
+
+        .spec-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #c4b5fd;
+        }
+
+        .spec-list li::before {
+            content: '✓';
+            color: #22c55e;
+            font-weight: bold;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: auto;
+        }
+
+        /* Color Palette */
+        .color-palette {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .color-swatch span {
+            font-size: 0.6rem;
+            margin-top: 5px;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* Variations Section */
+        .variations-section {
+            margin-top: 60px;
+        }
+
+        .variations-section h2 {
+            text-align: center;
+            color: #a78bfa;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+        }
+
+        .variations-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .variation-card {
+            background: rgba(26, 26, 58, 0.6);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .variation-card:hover {
+            border-color: #8b5cf6;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.2);
+        }
+
+        .variation-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .variation-card h3 {
+            color: #e0e0ff;
+            margin-bottom: 8px;
+        }
+
+        .variation-card p {
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        /* Animations Feature */
+        .animations-section {
+            margin-top: 60px;
+            background: rgba(26, 26, 58, 0.5);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .animations-section h2 {
+            text-align: center;
+            color: #a78bfa;
+            margin-bottom: 30px;
+        }
+
+        .animation-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .animation-feature {
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .animation-feature .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .animation-feature h3 {
+            color: #c4b5fd;
+            margin-bottom: 10px;
+        }
+
+        .animation-feature p {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            color: #6b7280;
+        }
+
+        @media (max-width: 1024px) {
+            .design-grid {
+                grid-template-columns: 1fr;
+            }
+            .variations-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .animation-features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Interviewer Avatar - Design Concept</h1>
+        <p class="subtitle">Professional 3D Half-Body Avatar for Interview Simulation</p>
+
+        <div class="design-grid">
+            <!-- Avatar Preview -->
+            <div class="avatar-preview">
+                <div class="avatar-frame">
+                    <div class="glow-ring"></div>
+                    
+                    <div class="avatar-character">
+                        <!-- Hair -->
+                        <div class="hair"></div>
+                        
+                        <!-- Head -->
+                        <div class="head">
+                            <!-- Eyebrows -->
+                            <div class="eyebrows">
+                                <div class="eyebrow"></div>
+                                <div class="eyebrow"></div>
+                            </div>
+                            
+                            <!-- Eyes -->
+                            <div class="eyes">
+                                <div class="eye"></div>
+                                <div class="eye"></div>
+                            </div>
+                            
+                            <!-- Nose -->
+                            <div class="nose"></div>
+                            
+                            <!-- Mouth -->
+                            <div class="mouth"></div>
+                        </div>
+                        
+                        <!-- Neck -->
+                        <div class="neck"></div>
+                        
+                        <!-- Body -->
+                        <div class="body">
+                            <div class="suit">
+                                <div class="shoulder-left"></div>
+                                <div class="shoulder-right"></div>
+                                <div class="lapel-left"></div>
+                                <div class="lapel-right"></div>
+                                <div class="shirt"></div>
+                                <div class="tie"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="status-badge">
+                        <span class="status-dot"></span>
+                        Speaking...
+                    </div>
+                </div>
+                
+                <p class="avatar-label">Professional Interviewer</p>
+            </div>
+
+            <!-- Specifications -->
+            <div class="specs-panel">
+                <h2>📋 Design Specifications</h2>
+                
+                <div class="spec-section">
+                    <h3>👤 Character Design</h3>
+                    <ul class="spec-list">
+                        <li>Half-body view (chest and above) <span class="feature-tag">Optimal</span></li>
+                        <li>Gender-neutral professional appearance</li>
+                        <li>Modern short hairstyle (dark color)</li>
+                        <li>Clean, friendly facial features</li>
+                        <li>Professional formal attire (dark suit)</li>
+                        <li>Purple/Violet accent tie (brand color)</li>
+                    </ul>
+                </div>
+
+                <div class="spec-section">
+                    <h3>🎨 Color Palette</h3>
+                    <div class="color-palette">
+                        <div class="color-swatch" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <span>Accent</span>
+                        </div>
+                        <div class="color-swatch" style="background: #1a1a3a;">
+                            <span>Suit</span>
+                        </div>
+                        <div class="color-swatch" style="background: #e8e8f0;">
+                            <span>Shirt</span>
+                        </div>
+                        <div class="color-swatch" style="background: linear-gradient(180deg, #f5d0b5, #dbb89a);">
+                            <span>Skin</span>
+                        </div>
+                        <div class="color-swatch" style="background: #2a2a3a;">
+                            <span>Hair</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="spec-section">
+                    <h3>✨ Visual Effects</h3>
+                    <ul class="spec-list">
+                        <li>Subtle glow aura around character</li>
+                        <li>Soft ambient lighting from above</li>
+                        <li>Gradient background (theme-aware)</li>
+                        <li>Status indicator for speaking/listening</li>
+                    </ul>
+                </div>
+
+                <div class="spec-section">
+                    <h3>📐 Technical Specs</h3>
+                    <ul class="spec-list">
+                        <li>Format: GLB (optimized) <span class="feature-tag">WebGL</span></li>
+                        <li>Polygon count: ~15,000 tris</li>
+                        <li>Texture resolution: 2K</li>
+                        <li>Rigged skeleton for animations</li>
+                        <li>Blend shapes for facial expressions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Persona Variations -->
+        <div class="variations-section">
+            <h2>🎭 Interviewer Personas</h2>
+            <div class="variations-grid">
+                <div class="variation-card">
+                    <div class="variation-icon">😊</div>
+                    <h3>Friendly</h3>
+                    <p>Warm, encouraging demeanor for comfortable interviews</p>
+                </div>
+                <div class="variation-card">
+                    <div class="variation-icon">⚖️</div>
+                    <h3>Professional</h3>
+                    <p>Balanced, neutral tone for standard interviews</p>
+                </div>
+                <div class="variation-card">
+                    <div class="variation-icon">🎯</div>
+                    <h3>Strict</h3>
+                    <p>Focused, serious for challenging practice</p>
+                </div>
+                <div class="variation-card">
+                    <div class="variation-icon">⚡</div>
+                    <h3>High-Pressure</h3>
+                    <p>Intense, fast-paced stress testing</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Animations -->
+        <div class="animations-section">
+            <h2>🎬 Built-in Animations</h2>
+            <div class="animation-features">
+                <div class="animation-feature">
+                    <div class="icon">👄</div>
+                    <h3>Lip Sync</h3>
+                    <p>Real-time mouth movement synced with TTS audio using viseme blendshapes</p>
+                </div>
+                <div class="animation-feature">
+                    <div class="icon">👀</div>
+                    <h3>Eye Contact Tracking</h3>
+                    <p>Webcam-based face tracking - avatar looks at the user</p>
+                </div>
+                <div class="animation-feature">
+                    <div class="icon">🌬️</div>
+                    <h3>Natural Breathing</h3>
+                    <p>Subtle chest/shoulder movement for lifelike presence</p>
+                </div>
+                <div class="animation-feature">
+                    <div class="icon">😌</div>
+                    <h3>Blinking</h3>
+                    <p>Natural random blinking at realistic intervals</p>
+                </div>
+                <div class="animation-feature">
+                    <div class="icon">🤔</div>
+                    <h3>Expressions</h3>
+                    <p>Subtle facial expressions (thinking, acknowledging, etc.)</p>
+                </div>
+                <div class="animation-feature">
+                    <div class="icon">🎭</div>
+                    <h3>Idle Animation</h3>
+                    <p>Micro-movements to avoid static "robot" feel</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>AI Interviewer Pro Max - Avatar Design Concept v1.0</p>
+            <p style="margin-top: 10px;">Open this file in browser to preview: <code>frontend/public/avatar-concept.html</code></p>
+        </div>
+    </div>
+</body>
+</html>

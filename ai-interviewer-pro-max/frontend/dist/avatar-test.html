@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0d0d1a;
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .controls {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        label {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        button.speaking {
+            background: #22c55e;
+            color: white;
+        }
+        
+        button.speaking:hover {
+            background: #16a34a;
+        }
+        
+        button.silent {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        button.silent:hover {
+            background: #2563eb;
+        }
+        
+        button.theme {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        button.theme:hover {
+            background: #7c3aed;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+        }
+        
+        .avatar-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 400px;
+        }
+        
+        #avatar-root {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .logs {
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .log-entry.error {
+            color: #f87171;
+        }
+        
+        .log-entry.warn {
+            color: #fbbf24;
+        }
+        
+        .log-entry.info {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label>Speaking State</label>
+                <button id="speakBtn" class="silent">Start Speaking</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Audio Level: <span id="audioValue">0.5</span></label>
+                <input type="range" id="audioLevel" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            
+            <div class="control-group">
+                <label>Theme</label>
+                <button id="themeBtn" class="theme">Switch to Light</button>
+            </div>
+        </div>
+        
+        <div class="avatar-wrapper">
+            <div id="avatar-root"></div>
+        </div>
+        
+        <div class="logs" id="logs">
+            <div class="log-entry info">Initializing avatar test page...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // State
+        let isSpeaking = false;
+        let audioLevel = 0.5;
+        let theme = 'dark';
+        let avatarRoot = null;
+        let React, ReactDOM, InterviewerAvatar;
+        
+        // Logging
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.insertBefore(entry, logs.firstChild);
+        }
+        
+        // Override console for logging
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            if (args[0]?.includes?.('[Avatar]') || args[0]?.includes?.('[GLBAvatar]')) {
+                log(args.join(' '), 'info');
+            }
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            log(args.join(' '), 'warn');
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            log(args.join(' '), 'error');
+        };
+        
+        // Render avatar
+        function renderAvatar() {
+            if (!avatarRoot || !React || !InterviewerAvatar) {
+                log('Components not loaded yet', 'warn');
+                return;
+            }
+            
+            avatarRoot.render(
+                React.createElement(InterviewerAvatar, {
+                    speaking: isSpeaking,
+                    audioLevel: audioLevel,
+                    enabled: true,
+                    theme: theme,
+                    listening: !isSpeaking
+                })
+            );
+            
+            log(`Rendered: speaking=${isSpeaking}, audioLevel=${audioLevel}, theme=${theme}`);
+        }
+        
+        // Initialize
+        async function init() {
+            try {
+                log('Loading React...');
+                
+                // Dynamic import with fallback for different Vite cache versions
+                try {
+                    React = (await import('/node_modules/.vite/deps/react.js')).default;
+                } catch (e) {
+                    // Try different paths
+                    const reactModule = await import('react');
+                    React = reactModule.default || reactModule;
+                }
+                
+                log('Loading ReactDOM...');
+                try {
+                    ReactDOM = await import('/node_modules/.vite/deps/react-dom_client.js');
+                } catch (e) {
+                    ReactDOM = await import('react-dom/client');
+                }
+                
+                log('Loading InterviewerAvatar component...');
+                const avatarModule = await import('/src/components/InterviewerAvatar/index.jsx');
+                InterviewerAvatar = avatarModule.default;
+                
+                log('Creating React root...');
+                const container = document.getElementById('avatar-root');
+                avatarRoot = ReactDOM.createRoot(container);
+                
+                log('Initial render...');
+                renderAvatar();
+                
+                log('Avatar loaded successfully!', 'info');
+            } catch (error) {
+                log(`Failed to load: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('speakBtn').addEventListener('click', function() {
+            isSpeaking = !isSpeaking;
+            this.textContent = isSpeaking ? 'Stop Speaking' : 'Start Speaking';
+            this.className = isSpeaking ? 'speaking' : 'silent';
+            renderAvatar();
+        });
+        
+        document.getElementById('audioLevel').addEventListener('input', function() {
+            audioLevel = parseFloat(this.value);
+            document.getElementById('audioValue').textContent = audioLevel.toFixed(2);
+            renderAvatar();
+        });
+        
+        document.getElementById('themeBtn').addEventListener('click', function() {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            this.textContent = `Switch to ${theme === 'dark' ? 'Light' : 'Dark'}`;
+            document.body.style.background = theme === 'dark' ? '#0d0d1a' : '#f0f4f8';
+            document.body.style.color = theme === 'dark' ? 'white' : '#1a1a2e';
+            renderAvatar();
+        });
+        
+        // Start
+        init();
+    </script>
+</body>
+</html>

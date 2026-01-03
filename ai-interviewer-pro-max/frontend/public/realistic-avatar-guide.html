@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Realistic Avatar - AI Interviewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+            min-height: 100vh;
+            color: #e0e0ff;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .subtitle { text-align: center; color: #9ca3af; margin-bottom: 50px; font-size: 1.2rem; }
+        
+        .step-card {
+            background: rgba(26, 26, 58, 0.8);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .step-card h2 { color: #22c55e; margin-bottom: 15px; font-size: 1.5rem; }
+        .step-card p { color: #c4b5fd; line-height: 1.8; margin-bottom: 15px; }
+        
+        .link-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #22c55e, #10b981);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+        .link-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3); }
+        .link-btn.secondary { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        
+        .avatar-examples {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .avatar-example {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .avatar-example img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 15px;
+            border: 3px solid #8b5cf6;
+        }
+        .avatar-example h3 { color: #a78bfa; margin-bottom: 8px; }
+        .avatar-example p { color: #9ca3af; font-size: 0.9rem; }
+        
+        .code-block {
+            background: #0d0d1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .code-block code {
+            color: #22c55e;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            white-space: pre;
+        }
+        
+        .highlight-box {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .highlight-box h3 { color: #22c55e; margin-bottom: 10px; }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .feature-icon { font-size: 1.5rem; }
+        .feature-text { color: #c4b5fd; }
+        
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .warning-box h3 { color: #f59e0b; margin-bottom: 10px; }
+        
+        @media (max-width: 768px) {
+            .avatar-examples { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Get Your Realistic Avatar</h1>
+        <p class="subtitle">Follow these steps to get a photorealistic 3D interviewer avatar</p>
+
+        <!-- STEP 1 -->
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <h2>Choose Your Avatar Source (FREE Options)</h2>
+            <p>Here are the best FREE sources for realistic 3D avatars with lip sync support:</p>
+            
+            <a href="https://readyplayer.me/" target="_blank" class="link-btn">🌟 Ready Player Me (BEST)</a>
+            <a href="https://www.mixamo.com/" target="_blank" class="link-btn secondary">Mixamo Characters</a>
+            <a href="https://sketchfab.com/search?q=realistic+human&type=models" target="_blank" class="link-btn secondary">Sketchfab</a>
+            
+            <div class="highlight-box">
+                <h3>✨ Why Ready Player Me?</h3>
+                <div class="features-grid">
+                    <div class="feature">
+                        <span class="feature-icon">👤</span>
+                        <span class="feature-text">Photorealistic humans</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">👄</span>
+                        <span class="feature-text">52 ARKit blend shapes for lip sync</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🎨</span>
+                        <span class="feature-text">Customize appearance</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📦</span>
+                        <span class="feature-text">GLB export (ready for Three.js)</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💰</span>
+                        <span class="feature-text">FREE for development</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">👔</span>
+                        <span class="feature-text">Professional outfits available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <h2>Create Your Avatar on Ready Player Me</h2>
+            <p>Follow these steps:</p>
+            <ol style="color: #c4b5fd; margin-left: 20px; line-height: 2.2;">
+                <li>Go to <a href="https://readyplayer.me/" target="_blank" style="color: #22c55e;">readyplayer.me</a></li>
+                <li>Click <strong>"Create Avatar"</strong></li>
+                <li>Choose <strong>"Half-Body"</strong> for interviewer view</li>
+                <li>Select a <strong>professional-looking character</strong>:
+                    <ul style="margin-left: 20px; margin-top: 8px;">
+                        <li>Clean hairstyle (short professional cut)</li>
+                        <li>Neutral or friendly expression</li>
+                        <li>Business attire (suit/blazer)</li>
+                        <li>Any skin tone you prefer</li>
+                    </ul>
+                </li>
+                <li>Click <strong>"Export"</strong> → Select <strong>".GLB"</strong> format</li>
+                <li>Enable <strong>"Include blend shapes"</strong> (IMPORTANT for lip sync!)</li>
+                <li>Download the file</li>
+            </ol>
+            
+            <div class="warning-box">
+                <h3>⚠️ Important Settings</h3>
+                <p style="color: #fcd34d;">When exporting, make sure to:</p>
+                <ul style="color: #fcd34d; margin-left: 20px; margin-top: 10px;">
+                    <li>✓ Include morph targets/blend shapes</li>
+                    <li>✓ Select "Half-body" or "Full-body" (not VR hands)</li>
+                    <li>✓ High quality textures (2K)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <h2>Replace Current Avatar</h2>
+            <p>Once you download the GLB file:</p>
+            
+            <div class="code-block">
+                <code>1. Rename your downloaded file to: 3d_model.glb
+
+2. Copy it to this location:
+   frontend/src/components/InterviewerAvatar/3d_model.glb
+
+3. Replace the existing file (backup the old one first!)
+
+4. Restart the dev server:
+   npm run dev
+
+5. Test at: http://localhost:5173/avatar-test.html</code>
+            </div>
+            
+            <p>Your new realistic avatar will automatically work with:</p>
+            <div class="features-grid">
+                <div class="feature">
+                    <span class="feature-icon">👄</span>
+                    <span class="feature-text">Lip sync (auto-detects visemes)</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">👀</span>
+                    <span class="feature-text">Eye contact tracking</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">😊</span>
+                    <span class="feature-text">Blinking animation</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🌬️</span>
+                    <span class="feature-text">Breathing motion</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: Alternative - Use Pre-made -->
+        <div class="step-card">
+            <div class="step-number">4</div>
+            <h2>Alternative: Download Pre-made Realistic Avatars</h2>
+            <p>If you want a quick solution, here are direct links to realistic avatars:</p>
+            
+            <a href="https://models.readyplayer.me/6409a4d5f8e2e6dc4dfd2b1d.glb" target="_blank" class="link-btn">👨‍💼 Professional Male</a>
+            <a href="https://models.readyplayer.me/6409a4e3f8e2e6dc4dfd2b1f.glb" target="_blank" class="link-btn">👩‍💼 Professional Female</a>
+            
+            <p style="margin-top: 20px; color: #9ca3af;">
+                <em>Right-click → "Save link as..." to download these GLB files directly.</em>
+            </p>
+        </div>
+
+        <!-- Quick Integration -->
+        <div class="step-card" style="border-color: rgba(139, 92, 246, 0.5);">
+            <h2 style="color: #a78bfa;">🚀 Want Me to Integrate It For You?</h2>
+            <p>Once you download a realistic avatar GLB file, just tell me:</p>
+            <div class="code-block">
+                <code>"I downloaded the avatar, it's in my Downloads folder. Please integrate it."</code>
+            </div>
+            <p>And I'll:</p>
+            <ul style="color: #c4b5fd; margin-left: 20px; line-height: 2;">
+                <li>✓ Copy the file to the correct location</li>
+                <li>✓ Update the code to use the new avatar</li>
+                <li>✓ Configure lip sync for the new model</li>
+                <li>✓ Test everything works</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; color: #6b7280;">
+            <p>AI Interviewer Pro Max - Realistic Avatar Integration Guide</p>
+        </div>
+    </div>
+</body>
+</html>
