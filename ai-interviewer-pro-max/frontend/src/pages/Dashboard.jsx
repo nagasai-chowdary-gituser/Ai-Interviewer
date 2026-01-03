@@ -22,6 +22,14 @@ import './Dashboard.css';
 function Dashboard() {
     const navigate = useNavigate();
 
+    // Redirect admin to admin panel
+    useEffect(() => {
+        const storedUser = getStoredUser();
+        if (storedUser?.is_admin) {
+            navigate('/admin', { replace: true });
+        }
+    }, [navigate]);
+
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
     const [analytics, setAnalytics] = useState({
@@ -155,7 +163,7 @@ function Dashboard() {
                             <BarChart3 size={20} />
                             <span>View Analytics</span>
                         </button>
-                        <button className="quick-action-btn" onClick={() => navigate('/ats')}>
+                        <button className="quick-action-btn" onClick={() => navigate('/resumes', { state: { activeTab: 'analyze' } })}>
                             <ScanSearch size={20} />
                             <span>ATS Analyser</span>
                         </button>

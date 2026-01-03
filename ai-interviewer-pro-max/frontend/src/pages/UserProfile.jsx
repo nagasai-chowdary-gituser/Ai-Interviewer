@@ -540,7 +540,7 @@ function UserProfile() {
       case 'interviews':
         return <InterviewHistorySection interviews={interviews} loading={loading} />;
       case 'analytics':
-        return <AnalyticsSection analytics={analytics?.overview} loading={loading} />;
+        return <AnalyticsSection analytics={analytics} loading={loading} />;
       default:
         return <OverviewSection user={user} stats={stats} />;
     }

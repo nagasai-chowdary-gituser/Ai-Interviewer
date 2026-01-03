@@ -1,7 +1,7 @@
 /**
- * Login Page - Premium Design
+ * Login Page - Premium Professional Design
  * 
- * Glassmorphism card with animated background.
+ * Split-screen layout with animated branding panel and clean form.
  * Handles both login and signup with smooth transitions.
  */
 
@@ -9,7 +9,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi, isAuthenticated } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
-import { Mail, Lock, User, AlertCircle, CheckCircle, Loader2, Sun, Moon, Shield } from 'lucide-react';
+import { 
+    Mail, Lock, User, AlertCircle, CheckCircle, Loader2, 
+    Sun, Moon, Eye, EyeOff, Sparkles, Zap, Target, 
+    Brain, Award, TrendingUp, ArrowRight, Shield
+} from 'lucide-react';
+import '../styles/auth.css';
 
 function Login() {
     const navigate = useNavigate();
@@ -31,6 +36,8 @@ function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [focusedField, setFocusedField] = useState(null);
 
     // Redirect if already authenticated
     useEffect(() => {
@@ -103,13 +110,20 @@ function Login() {
         setSuccess('');
 
         try {
+            let response;
             if (isLogin) {
-                await authApi.login(formData.email, formData.password);
+                response = await authApi.login(formData.email, formData.password);
             } else {
-                await authApi.signup(formData.name, formData.email, formData.password);
+                response = await authApi.signup(formData.name, formData.email, formData.password);
             }
-            const from = location.state?.from?.pathname || '/dashboard';
-            navigate(from, { replace: true });
+            
+            // Redirect admin to admin panel, regular users to dashboard
+            if (response?.user?.is_admin) {
+                navigate('/admin', { replace: true });
+            } else {
+                const from = location.state?.from?.pathname || '/dashboard';
+                navigate(from, { replace: true });
+            }
         } catch (err) {
             const message = err.message || 'Authentication failed. Please try again.';
             setError(message);
@@ -121,173 +135,267 @@ function Login() {
     // Switch between login and signup
     const handleModeSwitch = () => {
         setIsLogin(!isLogin);
+        setFormData({ name: '', email: '', password: '' });
         setError('');
         setSuccess('');
-        setFormData({ name: '', email: '', password: '' });
+        setShowPassword(false);
     };
 
+    const features = [
+        { icon: Brain, title: 'AI-Powered Practice', desc: 'Real interview simulations with intelligent feedback' },
+        { icon: Target, title: 'Personalized Questions', desc: 'Tailored to your experience and target role' },
+        { icon: TrendingUp, title: 'Track Progress', desc: 'Detailed analytics to improve over time' },
+        { icon: Award, title: 'Get Certified', desc: 'Earn badges and showcase your skills' },
+    ];
+
     return (
-        <div className="login-container">
-            {/* Theme Toggle - Top Right */}
-            <button
-                className="theme-toggle"
-                onClick={toggleTheme}
-                style={{
-                    position: 'absolute',
-                    top: '24px',
-                    right: '24px',
-                    zIndex: 10,
-                }}
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-                {isDark ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-
-            <div className="login-card">
-                {/* Logo/Title */}
-                <div className="login-header">
-                    <div className="login-logo">🎯</div>
-                    <h1>AI Interviewer</h1>
-                    <p>Master your interview skills with AI-powered practice</p>
+        <div className="auth-page">
+            {/* Left Panel - Branding */}
+            <div className="auth-branding">
+                {/* Animated Background Elements */}
+                <div className="auth-bg-shapes">
+                    <div className="shape shape-1"></div>
+                    <div className="shape shape-2"></div>
+                    <div className="shape shape-3"></div>
+                    <div className="shape shape-4"></div>
                 </div>
 
-                {/* Toggle Tabs */}
-                <div className="login-tabs">
-                    <button
-                        type="button"
-                        className={`tab ${isLogin ? 'active' : ''}`}
-                        onClick={() => !isLogin && handleModeSwitch()}
-                        disabled={loading}
-                    >
-                        Sign In
-                    </button>
-                    <button
-                        type="button"
-                        className={`tab ${!isLogin ? 'active' : ''}`}
-                        onClick={() => isLogin && handleModeSwitch()}
-                        disabled={loading}
-                    >
-                        Sign Up
-                    </button>
+                <div className="auth-branding-content">
+                    {/* Logo */}
+                    <div className="auth-logo">
+                        <div className="auth-logo-icon">
+                            <Sparkles size={32} />
+                        </div>
+                        <span className="auth-logo-text">AI Interviewer</span>
+                    </div>
+
+                    {/* Hero Text */}
+                    <div className="auth-hero">
+                        <h1>
+                            Master Your
+                            <span className="gradient-text"> Dream Interview</span>
+                        </h1>
+                        <p>
+                            Practice with AI, get instant feedback, and land your dream job 
+                            with confidence.
+                        </p>
+                    </div>
+
+                    {/* Features */}
+                    <div className="auth-features">
+                        {features.map((feature, index) => (
+                            <div 
+                                key={index} 
+                                className="auth-feature"
+                                style={{ animationDelay: `${index * 0.1}s` }}
+                            >
+                                <div className="auth-feature-icon">
+                                    <feature.icon size={20} />
+                                </div>
+                                <div className="auth-feature-text">
+                                    <h4>{feature.title}</h4>
+                                    <p>{feature.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Stats */}
+                    <div className="auth-stats">
+                        <div className="auth-stat">
+                            <span className="auth-stat-number">10K+</span>
+                            <span className="auth-stat-label">Users</span>
+                        </div>
+                        <div className="auth-stat-divider"></div>
+                        <div className="auth-stat">
+                            <span className="auth-stat-number">50K+</span>
+                            <span className="auth-stat-label">Interviews</span>
+                        </div>
+                        <div className="auth-stat-divider"></div>
+                        <div className="auth-stat">
+                            <span className="auth-stat-number">95%</span>
+                            <span className="auth-stat-label">Success Rate</span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Error Message */}
-                {error && (
-                    <div className="error-message" role="alert">
-                        <AlertCircle size={16} />
-                        <span>{error}</span>
+                {/* Floating Elements */}
+                <div className="auth-floating-elements">
+                    <div className="floating-card floating-card-1">
+                        <Zap size={16} />
+                        <span>Interview Started</span>
                     </div>
-                )}
-
-                {/* Success Message */}
-                {success && (
-                    <div className="success-message" role="status">
-                        <CheckCircle size={16} />
-                        <span>{success}</span>
+                    <div className="floating-card floating-card-2">
+                        <Award size={16} />
+                        <span>Score: 92%</span>
                     </div>
-                )}
+                </div>
+            </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="login-form">
-                    {/* Name field (signup only) */}
-                    {!isLogin && (
-                        <div className="form-group">
-                            <label htmlFor="name">
-                                <User size={14} style={{ marginRight: '6px', opacity: 0.7 }} />
-                                Full Name
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Enter your full name"
-                                autoComplete="name"
-                                disabled={loading}
-                                required={!isLogin}
-                            />
+            {/* Right Panel - Form */}
+            <div className="auth-form-panel">
+                {/* Theme Toggle */}
+                <button
+                    className="auth-theme-toggle"
+                    onClick={toggleTheme}
+                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                    {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+
+                <div className="auth-form-container">
+                    {/* Welcome Text */}
+                    <div className="auth-form-header">
+                        <h2>{isLogin ? 'Welcome back' : 'Create account'}</h2>
+                        <p>
+                            {isLogin 
+                                ? 'Enter your credentials to access your account' 
+                                : 'Start your interview preparation journey'}
+                        </p>
+                    </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="auth-alert auth-alert-error">
+                            <AlertCircle size={18} />
+                            <span>{error}</span>
                         </div>
                     )}
 
-                    {/* Email field */}
-                    <div className="form-group">
-                        <label htmlFor="email">
-                            <Mail size={14} style={{ marginRight: '6px', opacity: 0.7 }} />
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                            disabled={loading}
-                            required
-                        />
-                    </div>
+                    {/* Success Message */}
+                    {success && (
+                        <div className="auth-alert auth-alert-success">
+                            <CheckCircle size={18} />
+                            <span>{success}</span>
+                        </div>
+                    )}
 
-                    {/* Password field */}
-                    <div className="form-group">
-                        <label htmlFor="password">
-                            <Lock size={14} style={{ marginRight: '6px', opacity: 0.7 }} />
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            placeholder={isLogin ? "Enter your password" : "Create a strong password"}
-                            autoComplete={isLogin ? "current-password" : "new-password"}
-                            disabled={loading}
-                            required
-                            minLength={8}
-                        />
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="auth-form">
+                        {/* Name field (signup only) */}
                         {!isLogin && (
-                            <small className="form-hint">
-                                Min 8 characters with at least 1 letter and 1 number
-                            </small>
+                            <div className={`auth-input-group ${focusedField === 'name' ? 'focused' : ''} ${formData.name ? 'has-value' : ''}`}>
+                                <div className="auth-input-icon">
+                                    <User size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('name')}
+                                    onBlur={() => setFocusedField(null)}
+                                    placeholder="Full Name"
+                                    autoComplete="name"
+                                    disabled={loading}
+                                    required={!isLogin}
+                                />
+                                <div className="auth-input-highlight"></div>
+                            </div>
                         )}
+
+                        {/* Email field */}
+                        <div className={`auth-input-group ${focusedField === 'email' ? 'focused' : ''} ${formData.email ? 'has-value' : ''}`}>
+                            <div className="auth-input-icon">
+                                <Mail size={18} />
+                            </div>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                onFocus={() => setFocusedField('email')}
+                                onBlur={() => setFocusedField(null)}
+                                placeholder="Email Address"
+                                autoComplete="email"
+                                disabled={loading}
+                                required
+                            />
+                            <div className="auth-input-highlight"></div>
+                        </div>
+
+                        {/* Password field */}
+                        <div className={`auth-input-group ${focusedField === 'password' ? 'focused' : ''} ${formData.password ? 'has-value' : ''}`}>
+                            <div className="auth-input-icon">
+                                <Lock size={18} />
+                            </div>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                id="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                onFocus={() => setFocusedField('password')}
+                                onBlur={() => setFocusedField(null)}
+                                placeholder={isLogin ? "Password" : "Create Password"}
+                                autoComplete={isLogin ? "current-password" : "new-password"}
+                                disabled={loading}
+                                required
+                                minLength={8}
+                            />
+                            <button
+                                type="button"
+                                className="auth-password-toggle"
+                                onClick={() => setShowPassword(!showPassword)}
+                                tabIndex={-1}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                            <div className="auth-input-highlight"></div>
+                        </div>
+
+                        {!isLogin && (
+                            <p className="auth-password-hint">
+                                Min 8 characters with at least 1 letter and 1 number
+                            </p>
+                        )}
+
+                        {/* Submit button */}
+                        <button
+                            type="submit"
+                            className="auth-submit-btn"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 size={20} className="auth-spinner" />
+                                    <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                                    <ArrowRight size={18} />
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    {/* Divider */}
+                    <div className="auth-divider">
+                        <span>or</span>
                     </div>
 
-                    {/* Submit button */}
-                    <button
-                        type="submit"
-                        className="btn btn-primary btn-lg submit-button"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={18} className="spinner-small" style={{ animation: 'spin 1s linear infinite' }} />
-                                <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
-                            </>
-                        ) : (
-                            isLogin ? 'Sign In' : 'Create Account'
-                        )}
-                    </button>
-                </form>
+                    {/* Switch Mode */}
+                    <p className="auth-switch-text">
+                        {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                        <button
+                            type="button"
+                            className="auth-switch-btn"
+                            onClick={handleModeSwitch}
+                            disabled={loading}
+                        >
+                            {isLogin ? 'Sign up free' : 'Sign in'}
+                        </button>
+                    </p>
 
-                {/* Footer */}
-                <p className="login-footer">
-                    {isLogin ? "Don't have an account? " : 'Already have an account? '}
-                    <button
-                        type="button"
-                        className="link-button"
-                        onClick={handleModeSwitch}
-                        disabled={loading}
-                    >
-                        {isLogin ? 'Sign up free' : 'Sign in'}
-                    </button>
-                </p>
-
-                {/* Security notice */}
-                <div className="login-security">
-                    <Shield size={14} />
-                    <span>Your data is encrypted and secure</span>
+                    {/* Security Badge */}
+                    <div className="auth-security">
+                        <Shield size={14} />
+                        <span>256-bit SSL encryption • Your data is secure</span>
+                    </div>
                 </div>
             </div>
         </div>

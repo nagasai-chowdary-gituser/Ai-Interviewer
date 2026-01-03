@@ -30,6 +30,7 @@ import CareerRoadmap from './pages/CareerRoadmap';
 import Resumes from './pages/Resumes';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import UserProfile from './pages/UserProfile';
+import AdminDashboard from './pages/AdminDashboard';
 import AvatarTest from './pages/AvatarTest';
 
 // Components
@@ -158,6 +159,16 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <AnalyticsDashboard />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Admin Dashboard */}
+                        <Route
+                            path="/admin"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminDashboard />
                                 </ProtectedRoute>
                             }
                         />

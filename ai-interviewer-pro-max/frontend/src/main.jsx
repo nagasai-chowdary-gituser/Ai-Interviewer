@@ -14,9 +14,16 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { clearSessionData } from './services/api';
 import './styles/theme.css';
 
+console.log('[DEBUG] Main.jsx loaded');
+
 // Clear stale session/interview/ATS data on app startup
 // This ensures fresh state on every page reload
-clearSessionData();
+try {
+    clearSessionData();
+    console.log('[DEBUG] clearSessionData completed');
+} catch (e) {
+    console.error('[DEBUG] clearSessionData error:', e);
+}
 
 // Global error handler for uncaught errors outside React
 window.onerror = function (message, source, lineno, colno, error) {
@@ -32,6 +39,8 @@ window.onunhandledrejection = function (event) {
 // Get root element with safety check
 const rootElement = document.getElementById('root');
 
+console.log('[DEBUG] Root element:', rootElement);
+
 if (!rootElement) {
     // Absolute fallback if root element is missing
     document.body.innerHTML = `
@@ -46,11 +55,18 @@ if (!rootElement) {
         </div>
     `;
 } else {
-    ReactDOM.createRoot(rootElement).render(
-        <React.StrictMode>
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>
-        </React.StrictMode>
-    );
+    console.log('[DEBUG] About to render App');
+    try {
+        ReactDOM.createRoot(rootElement).render(
+            <React.StrictMode>
+                <ErrorBoundary>
+                    <App />
+                </ErrorBoundary>
+            </React.StrictMode>
+        );
+        console.log('[DEBUG] Render called');
+    } catch (e) {
+        console.error('[DEBUG] Render error:', e);
+        rootElement.innerHTML = `<div style="padding: 2rem; color: red;">Render Error: ${e.message}</div>`;
+    }
 }

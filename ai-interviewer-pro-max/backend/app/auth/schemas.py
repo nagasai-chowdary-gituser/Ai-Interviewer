@@ -96,6 +96,7 @@ class UserData(BaseModel):
     email: EmailStr = Field(..., description="User email")
     is_active: bool = Field(..., description="Account active status")
     is_verified: bool = Field(..., description="Email verified status")
+    is_admin: bool = Field(default=False, description="Admin status")
     created_at: Optional[str] = Field(None, description="Account creation timestamp")
     last_login_at: Optional[str] = Field(None, description="Last login timestamp")
 

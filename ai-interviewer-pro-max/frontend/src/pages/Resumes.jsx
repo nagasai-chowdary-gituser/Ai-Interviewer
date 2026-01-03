@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ResumeUpload from '../components/ResumeUpload';
 import ResumeList from '../components/ResumeList';
@@ -15,13 +15,15 @@ import { FileText, Upload, BarChart2, Target, Lightbulb, CheckCircle } from 'luc
 
 function Resumes() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [loading, setLoading] = useState(true);
     const [resumes, setResumes] = useState([]);
     const [selectedResume, setSelectedResume] = useState(null);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
-    const [activeTab, setActiveTab] = useState('upload');
+    // Check if navigated from Dashboard with activeTab state
+    const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'upload');
 
     const user = getStoredUser();
 
@@ -76,7 +78,7 @@ function Resumes() {
 
     const startInterview = () => {
         if (selectedResume) {
-            navigate('/interview-prep', { state: { resumeId: selectedResume.id } });
+            navigate('/select-domain', { state: { resumeId: selectedResume.id } });
         }
     };
 

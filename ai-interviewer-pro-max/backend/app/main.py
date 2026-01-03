@@ -30,6 +30,7 @@ from app.roadmap.routes import router as roadmap_router
 from app.companies.routes import router as companies_router
 from app.personalities.routes import router as personalities_router
 from app.analytics.routes import router as analytics_router
+from app.admin.routes import router as admin_router
 
 
 # ===========================================
@@ -278,13 +279,13 @@ app.include_router(
     tags=["Analytics"]
 )
 
+# Admin routes (admin only)
+app.include_router(
+    admin_router, 
+    prefix="/api/admin", 
+    tags=["Admin"]
+)
 
-# ===========================================
-# ROOT ENDPOINTS
-# ===========================================
-
-
-@app.get("/", tags=["Root"])
 async def root():
     """
     Root endpoint - API health check and welcome message.

@@ -17,35 +17,35 @@
     --bg-card-hover: rgba(20, 40, 70, 0.85);
     --bg-overlay: rgba(10, 22, 40, 0.92);
     --bg-overlay-color: rgba(10, 22, 40, 0.6);
-    
+
     /* Text Colors - Brighter for better contrast */
     --text-primary: #ffffff;
     --text-secondary: #f1f5f9;
     --text-muted: #94a3b8;
     --text-accent: #c4b5fd;
-    
+
     /* Border Colors - More visible */
     --border-primary: rgba(255, 255, 255, 0.18);
     --border-secondary: rgba(255, 255, 255, 0.25);
     --border-accent: rgba(139, 92, 246, 0.6);
-    
+
     /* Accent Colors */
     --accent-primary: #6366f1;
     --accent-secondary: #818cf8;
     --accent-glow: rgba(99, 102, 241, 0.4);
-    
+
     /* Stats & Cards - Enhanced backgrounds */
     --stat-bg: rgba(59, 130, 246, 0.25);
     --stat-completed-bg: rgba(34, 197, 94, 0.25);
     --stat-rating-bg: rgba(251, 191, 36, 0.25);
-    
+
     /* Robot Background - Enhanced visibility */
     --robot-opacity: 0.55;
     --robot-glow: rgba(99, 102, 241, 0.35);
-    
+
     /* Stars visibility */
     --stars-opacity: 0.5;
-    
+
     /* Button backgrounds for dark mode */
     --btn-bg: rgba(30, 45, 80, 0.85);
     --btn-bg-hover: rgba(40, 60, 100, 0.9);
@@ -56,42 +56,42 @@
    =========================================== */
 :root.light .cosmic-dashboard,
 [data-theme="light"] .cosmic-dashboard {
-    /* Background - Lighter gradient that lets robot show through */
-    --bg-primary: linear-gradient(135deg, #f0f7ff 0%, #e0efff 50%, #f5faff 100%);
+    /* Background - Clean solid gradient for light mode */
+    --bg-primary: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
     --bg-secondary: rgba(255, 255, 255, 0.5);
     --bg-card: rgba(255, 255, 255, 0.75);
     --bg-card-hover: rgba(255, 255, 255, 0.9);
     --bg-overlay: rgba(255, 255, 255, 0.85);
-    --bg-overlay-color: rgba(240, 247, 255, 0.3);
-    
+    --bg-overlay-color: transparent;
+
     /* Text Colors - Strong contrast for readability */
     --text-primary: #0f172a;
     --text-secondary: #1e293b;
     --text-muted: #475569;
     --text-accent: #1d4ed8;
-    
+
     /* Border Colors - Visible but subtle */
     --border-primary: rgba(30, 64, 175, 0.2);
     --border-secondary: rgba(30, 64, 175, 0.25);
     --border-accent: rgba(37, 99, 235, 0.5);
-    
+
     /* Accent Colors - Vibrant blue */
     --accent-primary: #2563eb;
     --accent-secondary: #3b82f6;
-    --accent-glow: rgba(37, 99, 235, 0.15);
-    
+    --accent-glow: transparent;
+
     /* Stats & Cards - More visible backgrounds */
     --stat-bg: rgba(37, 99, 235, 0.12);
     --stat-completed-bg: rgba(22, 163, 74, 0.12);
     --stat-rating-bg: rgba(234, 179, 8, 0.15);
-    
+
     /* Robot Background - More visible in light mode */
-    --robot-opacity: 0.7;
-    --robot-glow: rgba(37, 99, 235, 0.15);
-    
+    --robot-opacity: 0.75;
+    --robot-glow: transparent;
+
     /* Stars visibility - hide in light mode */
     --stars-opacity: 0;
-    
+
     /* Button colors for light mode */
     --btn-text: #ffffff;
     --btn-bg: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #1d4ed8 100%);
@@ -133,19 +133,22 @@
     object-position: center top;
     opacity: var(--robot-opacity);
     filter: blur(0px) saturate(1.1);
-    mask-image: 
-        radial-gradient(ellipse 90% 85% at 50% 35%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0) 100%);
-    -webkit-mask-image: 
-        radial-gradient(ellipse 90% 85% at 50% 35%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0) 100%);
+    mask-image:
+        radial-gradient(ellipse 90% 85% at 50% 35%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 60%, rgba(0, 0, 0, 0) 100%);
+    -webkit-mask-image:
+        radial-gradient(ellipse 90% 85% at 50% 35%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 60%, rgba(0, 0, 0, 0) 100%);
     /* animation removed for stability */
     transition: opacity 0.3s ease;
 }
 
 @keyframes bg-robot-breathe {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translate(-50%, -50%) scale(1);
         filter: blur(0.5px) brightness(1);
     }
+
     50% {
         transform: translate(-50%, -50%) scale(1.02);
         filter: blur(0.5px) brightness(1.05);
@@ -156,7 +159,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: 
+    background:
         radial-gradient(ellipse 100% 70% at 50% 25%, var(--robot-glow) 0%, transparent 60%);
     pointer-events: none;
     z-index: 1;
@@ -315,7 +318,7 @@
     font-weight: 700;
     color: #ffffff;
     margin-bottom: 40px;
-    box-shadow: 
+    box-shadow:
         0 15px 50px rgba(0, 0, 0, 0.4),
         0 0 40px rgba(139, 92, 246, 0.3),
         0 0 80px rgba(99, 102, 241, 0.15),
@@ -329,7 +332,7 @@
 .hero-title-badge:hover {
     transform: translateY(-5px) scale(1.05);
     border-color: rgba(139, 92, 246, 0.8);
-    box-shadow: 
+    box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.5),
         0 0 60px rgba(139, 92, 246, 0.5),
         0 0 100px rgba(99, 102, 241, 0.25),
@@ -343,19 +346,38 @@
 }
 
 @keyframes badge-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
 }
 
 @keyframes icon-pulse {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.8)); }
-    50% { transform: scale(1.1); filter: drop-shadow(0 0 15px rgba(167, 139, 250, 1)); }
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.8));
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 15px rgba(167, 139, 250, 1));
+    }
 }
 
 @keyframes badge-glow {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4), 0 0 40px rgba(139, 92, 246, 0.3), 0 0 80px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
     }
+
     50% {
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(139, 92, 246, 0.5), 0 0 120px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
@@ -400,12 +422,10 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent);
     transition: left 0.6s ease;
 }
 
@@ -427,7 +447,9 @@
 }
 
 @keyframes cta-breathe {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow:
             0 0 0 0 rgba(139, 92, 246, 0),
             0 15px 50px rgba(99, 102, 241, 0.6),
@@ -436,6 +458,7 @@
             inset 0 3px 0 rgba(255, 255, 255, 0.35),
             inset 0 -3px 0 rgba(0, 0, 0, 0.2);
     }
+
     50% {
         box-shadow:
             0 0 30px rgba(139, 92, 246, 0.4),
@@ -489,8 +512,13 @@
 }
 
 @keyframes glow-rotate {
-    0% { filter: blur(25px) hue-rotate(0deg); }
-    100% { filter: blur(25px) hue-rotate(360deg); }
+    0% {
+        filter: blur(25px) hue-rotate(0deg);
+    }
+
+    100% {
+        filter: blur(25px) hue-rotate(360deg);
+    }
 }
 
 .cosmic-cta:hover .cta-glow {
@@ -525,7 +553,7 @@
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     overflow: hidden;
-    box-shadow: 
+    box-shadow:
         0 8px 35px rgba(0, 0, 0, 0.4),
         0 0 30px rgba(139, 92, 246, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -561,7 +589,7 @@
     border-color: rgba(167, 139, 250, 0.9);
     color: #ffffff;
     transform: translateY(-6px) scale(1.05);
-    box-shadow: 
+    box-shadow:
         0 15px 45px rgba(139, 92, 246, 0.5),
         0 0 50px rgba(139, 92, 246, 0.35),
         0 0 80px rgba(99, 102, 241, 0.2),
@@ -635,7 +663,7 @@
     border: 2px solid rgba(99, 102, 241, 0.3);
     border-radius: 24px;
     transition: all 0.4s ease;
-    box-shadow: 
+    box-shadow:
         0 8px 30px rgba(0, 0, 0, 0.3),
         0 0 20px rgba(99, 102, 241, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -645,7 +673,7 @@
     background: linear-gradient(135deg, rgba(35, 55, 95, 0.95) 0%, rgba(30, 50, 85, 0.9) 100%);
     border-color: rgba(139, 92, 246, 0.6);
     transform: translateY(-8px) scale(1.03);
-    box-shadow: 
+    box-shadow:
         0 20px 50px rgba(0, 0, 0, 0.35),
         0 0 40px rgba(139, 92, 246, 0.25),
         0 0 80px rgba(99, 102, 241, 0.15),
@@ -1023,21 +1051,21 @@
     .cosmic-stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .cosmic-hero {
         padding: 160px 0 40px;
     }
-    
+
     .hero-title-badge {
         padding: 14px 28px;
         font-size: 1.1rem;
     }
-    
+
     .cosmic-cta {
         padding: 22px 60px;
         font-size: 1.3rem;
     }
-    
+
     .quick-action-btn {
         padding: 18px 32px;
         font-size: 1rem;
@@ -1051,19 +1079,19 @@
     .cosmic-main {
         padding: 16px 12px 100px;
     }
-    
+
     .cosmic-hero {
         padding: 140px 0 32px;
         margin-bottom: 30px;
     }
-    
+
     .hero-title-badge {
         padding: 12px 24px;
         font-size: 0.95rem;
         gap: 10px;
         margin-bottom: 24px;
     }
-    
+
     .hero-title-badge svg {
         width: 18px;
         height: 18px;
@@ -1077,7 +1105,7 @@
         margin-bottom: 28px;
         border-radius: 60px;
     }
-    
+
     .cosmic-cta svg {
         width: 20px;
         height: 20px;
@@ -1097,21 +1125,21 @@
         gap: 12px;
         border-radius: 50px;
     }
-    
+
     .quick-action-btn svg {
         width: 20px;
         height: 20px;
     }
-    
+
     /* Section Headers */
     .section-header {
         margin-bottom: 20px;
     }
-    
+
     .section-header h2 {
         font-size: 1.4rem;
     }
-    
+
     .section-subtitle {
         font-size: 0.9rem;
     }
@@ -1121,19 +1149,19 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
-    
+
     .cosmic-stat-card {
         padding: 18px;
         border-radius: 18px;
     }
-    
+
     .stat-icon {
         width: 48px;
         height: 48px;
         margin-bottom: 14px;
         border-radius: 14px;
     }
-    
+
     .stat-icon svg {
         width: 24px;
         height: 24px;
@@ -1142,37 +1170,37 @@
     .stat-value {
         font-size: 2rem;
     }
-    
+
     .stat-label {
         font-size: 0.75rem;
         text-transform: uppercase;
     }
-    
+
     /* Recent Items */
     .cosmic-recent-list {
         gap: 10px;
     }
-    
+
     .cosmic-recent-item {
         padding: 16px;
         gap: 14px;
         border-radius: 14px;
     }
-    
+
     .recent-icon {
         width: 40px;
         height: 40px;
         min-width: 40px;
     }
-    
+
     .recent-info strong {
         font-size: 0.9rem;
     }
-    
+
     .recent-date {
         font-size: 0.7rem;
     }
-    
+
     .status-badge {
         padding: 5px 10px;
         font-size: 0.65rem;
@@ -1187,30 +1215,30 @@
         justify-content: center;
         border-radius: 40px;
     }
-    
+
     .user-avatar {
         width: 36px;
         height: 36px;
         font-size: 0.9rem;
     }
-    
+
     .user-info strong {
         font-size: 0.85rem;
     }
-    
+
     .user-info span {
         font-size: 0.7rem;
     }
-    
+
     /* Empty State */
     .cosmic-empty-state {
         padding: 32px 20px;
     }
-    
+
     .cosmic-empty-state h3 {
         font-size: 1rem;
     }
-    
+
     .cosmic-empty-state p {
         font-size: 0.85rem;
     }
@@ -1223,44 +1251,44 @@
     .cosmic-main {
         padding: 12px 10px 90px;
     }
-    
+
     .cosmic-hero {
         padding: 120px 0 24px;
     }
-    
+
     .hero-title-badge {
         padding: 10px 20px;
         font-size: 0.85rem;
     }
-    
+
     .cosmic-cta {
         padding: 16px 32px;
         font-size: 0.9rem;
         width: 100%;
     }
-    
+
     .quick-action-btn {
         padding: 14px 20px;
         font-size: 0.85rem;
     }
-    
+
     .cosmic-stats-grid {
         gap: 10px;
     }
-    
+
     .cosmic-stat-card {
         padding: 14px;
     }
-    
+
     .stat-icon {
         width: 42px;
         height: 42px;
     }
-    
+
     .stat-value {
         font-size: 1.7rem;
     }
-    
+
     .stat-label {
         font-size: 0.65rem;
     }
@@ -1271,6 +1299,7 @@
    =========================================== */
 :root:not(.light) .cosmic-dashboard,
 [data-theme="dark"] .cosmic-dashboard {
+
     /* Ensure cards have solid backgrounds */
     .cosmic-stat-card,
     .cosmic-recent-item,
@@ -1280,74 +1309,74 @@
         border-color: rgba(99, 102, 241, 0.3);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
-    
+
     .cosmic-stat-card:hover,
     .cosmic-recent-item:hover {
         background: linear-gradient(135deg, rgba(30, 50, 85, 0.95) 0%, rgba(25, 45, 75, 0.9) 100%);
         border-color: rgba(139, 92, 246, 0.5);
         box-shadow: 0 8px 30px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
-    
+
     /* Section headers */
     .section-header h2 {
         color: #ffffff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
-    
+
     .section-subtitle {
         color: #94a3b8;
     }
-    
+
     /* Stats text */
     .stat-value {
         color: #ffffff;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
-    
+
     .stat-label {
         color: #94a3b8;
     }
-    
+
     /* Recent items text */
     .recent-info strong {
         color: #f1f5f9;
     }
-    
+
     .recent-date {
         color: #94a3b8;
     }
-    
+
     /* Status badges */
     .status-badge.completed {
         background: rgba(99, 102, 241, 0.3);
         color: #c4b5fd;
         border: 1px solid rgba(139, 92, 246, 0.4);
     }
-    
+
     .status-badge.progress {
         background: rgba(251, 191, 36, 0.25);
         color: #fde047;
         border: 1px solid rgba(251, 191, 36, 0.4);
     }
-    
+
     /* User card text */
     .user-info strong {
         color: #f1f5f9;
     }
-    
+
     .user-info span {
         color: #94a3b8;
     }
-    
+
     /* Empty state */
     .cosmic-empty-state h3 {
         color: #f1f5f9;
     }
-    
+
     .cosmic-empty-state p {
         color: #94a3b8;
     }
-    
+
     /* Stat icons */
     .stat-icon,
     .recent-icon {
@@ -1355,29 +1384,29 @@
         color: #c4b5fd;
         box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
     }
-    
+
     .stat-icon.completed,
     .recent-icon.completed {
         background: rgba(34, 197, 94, 0.25);
         color: #4ade80;
     }
-    
+
     .stat-icon.rating {
         background: rgba(251, 191, 36, 0.25);
         color: #fde047;
     }
-    
+
     /* Action card */
     .cosmic-stat-card.action {
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%);
         border-color: rgba(139, 92, 246, 0.5);
     }
-    
+
     .cosmic-stat-card.action:hover {
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(79, 70, 229, 0.3) 100%);
         box-shadow: 0 8px 30px rgba(139, 92, 246, 0.3);
     }
-    
+
     .cosmic-stat-card.action span {
         color: #c4b5fd;
     }
@@ -1391,8 +1420,8 @@
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
     border: 2px solid rgba(37, 99, 235, 0.35);
     color: #1e3a8a;
-    box-shadow: 
-        0 15px 50px rgba(0, 0, 0, 0.12), 
+    box-shadow:
+        0 15px 50px rgba(0, 0, 0, 0.12),
         0 0 30px rgba(37, 99, 235, 0.15),
         0 0 60px rgba(59, 130, 246, 0.1),
         inset 0 1px 0 rgba(255, 255, 255, 1);
@@ -1446,7 +1475,7 @@
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
     border: 2px solid rgba(37, 99, 235, 0.3);
     color: #1e3a8a;
-    box-shadow: 
+    box-shadow:
         0 8px 30px rgba(0, 0, 0, 0.1),
         0 2px 8px rgba(0, 0, 0, 0.08),
         0 0 20px rgba(37, 99, 235, 0.08),
@@ -1465,7 +1494,7 @@
     background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.98) 100%);
     border-color: rgba(37, 99, 235, 0.6);
     transform: translateY(-6px) scale(1.05);
-    box-shadow: 
+    box-shadow:
         0 15px 45px rgba(37, 99, 235, 0.25),
         0 5px 15px rgba(0, 0, 0, 0.1),
         0 0 40px rgba(37, 99, 235, 0.15),
@@ -1488,7 +1517,7 @@
 [data-theme="light"] .cosmic-dashboard .cosmic-stat-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
     border: 1.5px solid rgba(37, 99, 235, 0.12);
-    box-shadow: 
+    box-shadow:
         0 4px 15px rgba(0, 0, 0, 0.05),
         inset 0 1px 0 rgba(255, 255, 255, 1);
 }
@@ -1497,7 +1526,7 @@
 [data-theme="light"] .cosmic-dashboard .cosmic-stat-card:hover {
     background: rgba(255, 255, 255, 0.98);
     border-color: rgba(37, 99, 235, 0.25);
-    box-shadow: 
+    box-shadow:
         0 8px 30px rgba(0, 0, 0, 0.08),
         0 0 0 1px rgba(37, 99, 235, 0.1);
 }
@@ -1506,7 +1535,7 @@
 [data-theme="light"] .cosmic-dashboard .cosmic-recent-item {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
     border: 1.5px solid rgba(37, 99, 235, 0.12);
-    box-shadow: 
+    box-shadow:
         0 2px 10px rgba(0, 0, 0, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 1);
 }
@@ -1515,7 +1544,7 @@
 [data-theme="light"] .cosmic-dashboard .cosmic-recent-item:hover {
     background: rgba(255, 255, 255, 0.98);
     border-color: rgba(37, 99, 235, 0.35);
-    box-shadow: 
+    box-shadow:
         0 8px 25px rgba(37, 99, 235, 0.12),
         0 0 0 1px rgba(37, 99, 235, 0.1);
 }
@@ -1524,7 +1553,7 @@
 [data-theme="light"] .cosmic-dashboard .cosmic-user-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
     border: 1.5px solid rgba(37, 99, 235, 0.15);
-    box-shadow: 
+    box-shadow:
         0 4px 20px rgba(0, 0, 0, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 1);
 }
@@ -1563,12 +1592,30 @@
 /* Light mode robot image - better visibility */
 :root.light .cosmic-dashboard .ai-robot-bg-image,
 [data-theme="light"] .cosmic-dashboard .ai-robot-bg-image {
-    filter: blur(0px) contrast(1.15) brightness(0.9) saturate(1.2);
-    opacity: 0.65;
+    filter: blur(0px) contrast(1.1) brightness(1) saturate(1.15);
+    opacity: 0.8;
 }
 
-/* Light mode - reduce overlay blocking robot */
+/* Light mode - completely hide the glow overlay on robot */
+:root.light .cosmic-dashboard .ai-robot-bg::before,
+[data-theme="light"] .cosmic-dashboard .ai-robot-bg::before {
+    display: none;
+}
+
+/* Light mode - subtle bottom fade only */
 :root.light .cosmic-dashboard .ai-robot-bg::after,
 [data-theme="light"] .cosmic-dashboard .ai-robot-bg::after {
-    background: linear-gradient(to bottom, transparent 0%, transparent 70%, rgba(240, 247, 255, 0.6) 100%);
+    background: linear-gradient(to bottom, transparent 0%, transparent 80%, rgba(248, 250, 252, 0.9) 100%);
+}
+
+/* Light mode - hide cosmic gradient completely */
+:root.light .cosmic-dashboard .cosmic-bg,
+[data-theme="light"] .cosmic-dashboard .cosmic-bg {
+    display: none;
+}
+
+/* Light mode - hide cosmic gradient element */
+:root.light .cosmic-dashboard .cosmic-gradient,
+[data-theme="light"] .cosmic-dashboard .cosmic-gradient {
+    display: none;
 }

@@ -391,7 +391,7 @@ function AnalyticsDashboard() {
                             <p>Complete your first interview to see results here</p>
                             <button
                                 className="btn btn-primary"
-                                onClick={() => navigate('/interview-prep')}
+                                onClick={() => navigate('/select-domain')}
                             >
                                 Start Your First Interview
                             </button>
@@ -436,7 +436,7 @@ function AnalyticsDashboard() {
                 <section className="cta-section">
                     <button
                         className="btn btn-primary btn-lg"
-                        onClick={() => navigate('/interview-prep')}
+                        onClick={() => navigate('/select-domain')}
                     >
                         <Sparkles size={20} />
                         Start New Interview

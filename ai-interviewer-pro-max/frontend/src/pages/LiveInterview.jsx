@@ -413,9 +413,10 @@ function LiveInterview() {
                 // Update URL
                 window.history.replaceState(null, '', `/interview/${response.session_id}`);
 
-                // START VIDEO RECORDING (Auto-start)
-                if (recordingSupported && isCameraReady) {
-                    console.log('[V3] Auto-starting interview recording...');
+                // START VIDEO RECORDING - ONLY for strict and high-pressure modes
+                const shouldRecordVideo = selectedPersona === 'strict' || selectedPersona === 'stress';
+                if (shouldRecordVideo && recordingSupported && isCameraReady) {
+                    console.log('[V3] Auto-starting interview recording for', selectedPersona, 'mode...');
                     startRecording();
                 }
 
@@ -1288,6 +1289,26 @@ function LiveInterview() {
                 stopVideoRecording();
             }
 
+            // Save video blob to IndexedDB before navigating (for strict/high-pressure modes)
+            if (recordingBlob) {
+                try {
+                    await saveVideoBlob(sessionId, recordingBlob);
+                    console.log('[Recording] Video blob saved on early end');
+                } catch (err) {
+                    console.warn('[Recording] Failed to save video blob:', err);
+                }
+            }
+
+            // Also save analytics video blob if available
+            if (isAnalyticsEnabled && videoData.blob) {
+                try {
+                    await saveVideoBlob(sessionId, videoData.blob);
+                    console.log('[Analytics] Analytics video blob saved on early end');
+                } catch (err) {
+                    console.warn('[Analytics] Failed to save video blob:', err);
+                }
+            }
+
             const response = await liveInterviewApi.end(sessionId);
             if (response.success) {
                 setStatus('completed');  // FIXED: Match backend status
@@ -1654,6 +1675,17 @@ function LiveInterview() {
                                 isRunning={timerData.isRunning}
                                 showWarnings={true}
                             />
+                        )}
+
+                        {/* Recording Indicator (Strict/High-Pressure Modes) */}
+                        {isRecording && (persona === 'strict' || persona === 'stress') && (
+                            <div className="recording-indicator-container">
+                                <RecordingIndicator 
+                                    isRecording={isRecording} 
+                                    duration={recordingDuration}
+                                />
+                                <span className="recording-note">Your interview is being recorded</span>
+                            </div>
                         )}
 
                         {/* Real-time Analytics Stats (Strict/High-Pressure) */}

@@ -235,7 +235,7 @@ async def get_analytics(
             "completed_interviews": completed_interviews,
             "average_score": average_score,
             "best_score": best_score,
-            "score_trend": trend,
+            "trend": trend,
             "last_interview_at": last_interview_at,
             "completion_rate": completion_rate,
             "total_questions_answered": total_questions_answered,
