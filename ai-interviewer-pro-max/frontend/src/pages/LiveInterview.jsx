@@ -59,23 +59,76 @@ function LiveInterview() {
     // ===========================================
     // FULLSCREEN MODE STATE (CINEMATIC EXPERIENCE)
     // ===========================================
-    const [isFullscreen, setIsFullscreen] = useState(true); // Start in fullscreen by default
+    const [isFullscreen, setIsFullscreen] = useState(true); // CSS fullscreen state
+    const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(false); // TRUE browser fullscreen state
 
-    // ESC key handler for fullscreen toggle
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                setIsFullscreen(prev => !prev);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+    // ===========================================
+    // BROWSER FULLSCREEN API (EXAM-GRADE)
+    // ===========================================
+    
+    // Enter TRUE browser fullscreen (hides Chrome URL bar, tabs, etc.)
+    const enterBrowserFullscreen = useCallback(() => {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => {
+                console.warn('Fullscreen request failed:', err);
+            });
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
     }, []);
 
-    // NUCLEAR: Add/remove body class for fullscreen mode
-    // This bypasses ALL parent container constraints
+    // Exit browser fullscreen
+    const exitBrowserFullscreen = useCallback(() => {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => {
+                console.warn('Exit fullscreen failed:', err);
+            });
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }, []);
+
+    // Toggle browser fullscreen
+    const toggleBrowserFullscreen = useCallback(() => {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            exitBrowserFullscreen();
+        } else {
+            enterBrowserFullscreen();
+        }
+    }, [enterBrowserFullscreen, exitBrowserFullscreen]);
+
+    // Listen for browser fullscreen changes (ESC key is handled by browser)
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isInFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+            setIsBrowserFullscreen(isInFullscreen);
+            // Also sync CSS fullscreen state
+            setIsFullscreen(isInFullscreen);
+            
+            // CRITICAL: Trigger resize event to fix canvas/camera after fullscreen change
+            // This ensures eye contact and avatar rendering updates properly
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 100);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+        };
+    }, []);
+
+    // CSS fullscreen body lock (for layout control)
     useEffect(() => {
         if (isFullscreen) {
             // Lock everything
@@ -105,7 +158,7 @@ function LiveInterview() {
         };
     }, [isFullscreen]);
 
-    // Toggle fullscreen mode
+    // Toggle CSS fullscreen mode (for layout)
     const toggleFullscreen = useCallback(() => {
         setIsFullscreen(prev => !prev);
     }, []);
@@ -794,15 +847,19 @@ function LiveInterview() {
     const handlePermissionsGranted = useCallback(() => {
         setShowPermissionModal(false);
         setPermissionsSkipped(false);
+        // Enter TRUE browser fullscreen when starting interview (EXAM-GRADE)
+        enterBrowserFullscreen();
         startNewInterview();
-    }, [startNewInterview]);
+    }, [startNewInterview, enterBrowserFullscreen]);
 
     const handlePermissionsSkipped = useCallback(() => {
         setShowPermissionModal(false);
         setPermissionsSkipped(true);
         setAvatarEnabled(false); // Disable avatar if no camera
+        // Enter TRUE browser fullscreen when starting interview (EXAM-GRADE)
+        enterBrowserFullscreen();
         startNewInterview();
-    }, [startNewInterview]);
+    }, [startNewInterview, enterBrowserFullscreen]);
 
     // ===========================================
     // INITIAL LOAD EFFECT
@@ -1584,10 +1641,10 @@ function LiveInterview() {
                     <div className="fc-right">
                         <button
                             className="fc-btn"
-                            onClick={toggleFullscreen}
-                            title="Exit Fullscreen (ESC)"
+                            onClick={toggleBrowserFullscreen}
+                            title={isBrowserFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
                         >
-                            <Minimize2 size={18} />
+                            {isBrowserFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                         </button>
                         <button
                             className="fc-btn exit-btn"
@@ -1748,10 +1805,10 @@ function LiveInterview() {
                                     )}
                                     <button 
                                         className="header-icon-btn" 
-                                        title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
-                                        onClick={toggleFullscreen}
+                                        title={isBrowserFullscreen ? "Exit Fullscreen (ESC)" : "Enter Browser Fullscreen"}
+                                        onClick={toggleBrowserFullscreen}
                                     >
-                                        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                                        {isBrowserFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                                     </button>
                                 </div>
                             </div>

@@ -1,13 +1,14 @@
 /**
- * Interviewer Avatar Styles - CINEMATIC FULLSCREEN v10 (NUCLEAR)
+ * Interviewer Avatar Styles - CINEMATIC FULLSCREEN v11 (EXAM-GRADE)
  * 
  * TRUE FULLSCREEN ARCHITECTURE:
  * ✅ position: fixed with inset: 0
  * ✅ 100vw x 100vh viewport units
- * ✅ Fullscreen state toggle
- * ✅ ESC key handling
+ * ✅ Browser Fullscreen API support
+ * ✅ ESC key exits browser fullscreen (browser controlled)
  * ✅ No parent container constraints
  * ✅ NUCLEAR: Body lock when fullscreen active
+ * ✅ Clean UI in browser fullscreen (no shadows/dust)
  */
 
 /* ===========================================
@@ -40,6 +41,35 @@ body.interview-fullscreen-active > #root > *:not(.live-interview-container) {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
+}
+
+/* ===========================================
+   🎯 BROWSER FULLSCREEN MODE - CLEAN UI
+   Removes any shadows/dust when in TRUE fullscreen
+   =========================================== */
+
+:fullscreen .live-interview-container,
+:-webkit-full-screen .live-interview-container,
+:-moz-full-screen .live-interview-container,
+:-ms-fullscreen .live-interview-container {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+:fullscreen .fullscreen-controls-bar,
+:-webkit-full-screen .fullscreen-controls-bar {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+:fullscreen .avatar-panel-header,
+:-webkit-full-screen .avatar-panel-header {
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
 }
 
 /* ===========================================
@@ -223,11 +253,15 @@ div.live-interview-container::after {
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%);
+    background: transparent !important;
     z-index: 10000 !important;
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
+    /* NO BLUR OR SHADOW - CLEAN TOP */
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    filter: none !important;
 }
 
 .fullscreen-controls-bar > * {
@@ -428,6 +462,35 @@ div.avatar-panel,
 
 [data-theme="dark"] .avatar-panel-header {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+}
+
+/* CLEAN HEADER IN BROWSER FULLSCREEN - Remove all dust/blur */
+:fullscreen .avatar-panel-header,
+:-webkit-full-screen .avatar-panel-header,
+:-moz-full-screen .avatar-panel-header {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+:fullscreen .fullscreen-controls-bar,
+:-webkit-full-screen .fullscreen-controls-bar {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+
+/* Also clean persona-badge and question-progress in fullscreen */
+:fullscreen .persona-badge,
+:-webkit-full-screen .persona-badge {
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+
+:fullscreen .question-progress,
+:-webkit-full-screen .question-progress {
+    backdrop-filter: none !important;
 }
 
 .avatar-panel-header > * {
