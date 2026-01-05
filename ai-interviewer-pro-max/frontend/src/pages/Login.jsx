@@ -3,6 +3,9 @@
  * 
  * Split-screen layout with animated branding panel and clean form.
  * Handles both login and signup with smooth transitions.
+ * 
+ * Note: Maintenance mode is now handled at App.jsx level.
+ * This page will not be shown during maintenance (except for admin login).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,10 +14,12 @@ import { authApi, isAuthenticated } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { 
     Mail, Lock, User, AlertCircle, CheckCircle, Loader2, 
-    Sun, Moon, Eye, EyeOff, Sparkles, Zap, Target, 
-    Brain, Award, TrendingUp, ArrowRight, Shield
+    Sun, Moon, Eye, EyeOff, Sparkles, Target, 
+    Brain, Award, TrendingUp, ArrowRight, Zap, Shield
 } from 'lucide-react';
 import '../styles/auth.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function Login() {
     const navigate = useNavigate();
@@ -121,6 +126,21 @@ function Login() {
             if (response?.user?.is_admin) {
                 navigate('/admin', { replace: true });
             } else {
+                // Check maintenance mode for non-admin users after login
+                try {
+                    const maintenanceResponse = await fetch(`${API_BASE}/api/public/maintenance-status`);
+                    if (maintenanceResponse.ok) {
+                        const maintenanceData = await maintenanceResponse.json();
+                        if (maintenanceData.maintenance_mode) {
+                            // Redirect to maintenance page
+                            navigate('/maintenance', { replace: true });
+                            return;
+                        }
+                    }
+                } catch (maintenanceErr) {
+                    console.log('Maintenance check failed:', maintenanceErr);
+                }
+                
                 const from = location.state?.from?.pathname || '/dashboard';
                 navigate(from, { replace: true });
             }

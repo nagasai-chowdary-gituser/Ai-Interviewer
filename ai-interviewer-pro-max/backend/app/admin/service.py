@@ -123,7 +123,7 @@ class SystemMonitor:
     def get_full_health_report(cls) -> Dict[str, Any]:
         """Get complete system health report."""
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow().isoformat() + 'Z',
             "cpu": cls.get_cpu_usage(),
             "memory": cls.get_memory_usage(),
             "disk": cls.get_disk_usage(),
@@ -710,7 +710,7 @@ class IntegrationService:
         return {
             "status": health_status,
             "error": error_message,
-            "checked_at": datetime.utcnow().isoformat()
+            "checked_at": datetime.utcnow().isoformat() + 'Z'
         }
 
 
@@ -722,7 +722,7 @@ class AIAPILogService:
     """Service for logging AI API calls (Gemini & Groq)."""
     
     @staticmethod
-    def log_call(
+    def log_ai_call(
         db: Session,
         provider: str,
         operation: str,

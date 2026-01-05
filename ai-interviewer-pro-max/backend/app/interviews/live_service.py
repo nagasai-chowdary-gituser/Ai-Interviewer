@@ -23,6 +23,7 @@ from app.interviews.live_models import LiveInterviewSession, InterviewMessage, I
 from app.interviews.plan_models import InterviewPlan
 from app.personalities.modes import get_personality, get_default_personality, PersonalityProfile
 from app.reports.service import ReportService
+from app.admin.service import AIAPILogService
 
 
 class LiveInterviewService:
@@ -243,8 +244,15 @@ class LiveInterviewService:
     # GROQ API CALLS
     # ===========================================
     
-    async def _ask_groq(self, messages: List[Dict], max_tokens: int = 150) -> str:
-        """Make a Groq API call with robust error handling."""
+    async def _ask_groq(
+        self, 
+        messages: List[Dict], 
+        max_tokens: int = 150,
+        operation: str = "groq_chat",
+        user_id: str = None,
+        session_id: str = None
+    ) -> str:
+        """Make a Groq API call with robust error handling and logging."""
         client = self._get_groq_client()
         
         if not client:
@@ -253,6 +261,7 @@ class LiveInterviewService:
         
         # Use currently supported model (mixtral-8x7b-32768 is decommissioned)
         model = "llama-3.1-8b-instant"
+        start_time = time.time()
         
         try:
             response = client.chat.completions.create(
@@ -261,10 +270,55 @@ class LiveInterviewService:
                 max_tokens=max_tokens,
                 temperature=0.7,
             )
-            return response.choices[0].message.content.strip()
+            
+            result = response.choices[0].message.content.strip()
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful AI API call
+            try:
+                # Get token usage if available
+                prompt_tokens = getattr(response.usage, 'prompt_tokens', None) if hasattr(response, 'usage') else None
+                completion_tokens = getattr(response.usage, 'completion_tokens', None) if hasattr(response, 'usage') else None
+                total_tokens = getattr(response.usage, 'total_tokens', None) if hasattr(response, 'usage') else None
+                
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="groq",
+                    operation=operation,
+                    model=model,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
+                    response_time_ms=response_time_ms,
+                    status="success",
+                    user_id=user_id,
+                    session_id=session_id
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Groq call: {log_error}")
+            
+            return result
         except Exception as e:
             error_msg = str(e)
+            response_time_ms = int((time.time() - start_time) * 1000)
             print(f"[Groq API Error] Model: {model}, Error: {error_msg}")
+            
+            # Log failed AI API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="groq",
+                    operation=operation,
+                    model=model,
+                    response_time_ms=response_time_ms,
+                    status="error",
+                    error_message=error_msg[:500],  # Truncate error message
+                    user_id=user_id,
+                    session_id=session_id
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Groq error: {log_error}")
+            
             # Return None instead of crashing - caller will use fallback
             return None
     
@@ -289,7 +343,7 @@ Do NOT include any evaluation or scoring language."""
             }
         ]
         
-        result = await self._ask_groq(messages, max_tokens=100)
+        result = await self._ask_groq(messages, max_tokens=100, operation="generate_greeting")
         return result or self._get_persona_greeting(persona, target_role)
     
     async def _generate_groq_acknowledgment(
@@ -354,7 +408,7 @@ Examples of BAD acknowledgments (NEVER use):
             }
         ]
         
-        result = await self._ask_groq(messages, max_tokens=60)
+        result = await self._ask_groq(messages, max_tokens=60, operation="generate_acknowledgment", session_id=session_id)
         
         # Filter out any accidental generic phrases
         if result:
@@ -381,7 +435,7 @@ Examples of BAD acknowledgments (NEVER use):
             }
         ]
         
-        result = await self._ask_groq(messages, max_tokens=100)
+        result = await self._ask_groq(messages, max_tokens=100, operation="check_answer_relevance")
         
         # Parse result or use fallback
         word_count = len(answer.split())
@@ -523,7 +577,7 @@ Generate ONE challenging follow-up question:"""
             }
         ]
         
-        result = await self._ask_groq(messages, max_tokens=80)
+        result = await self._ask_groq(messages, max_tokens=80, operation="pressure_follow_up")
         
         if result:
             # Clean up the result
@@ -602,7 +656,7 @@ Generate the challenging variant:"""
             }
         ]
         
-        result = await self._ask_groq(messages, max_tokens=150)
+        result = await self._ask_groq(messages, max_tokens=150, operation="stress_mode_question")
         return result if result else original_question
     
     # ===========================================

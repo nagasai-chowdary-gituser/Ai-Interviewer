@@ -1589,11 +1589,15 @@
     color: #2563eb;
 }
 
-/* Light mode robot image - better visibility */
+/* Light mode robot image - clear visibility without fog */
 :root.light .cosmic-dashboard .ai-robot-bg-image,
 [data-theme="light"] .cosmic-dashboard .ai-robot-bg-image {
     filter: blur(0px) contrast(1.1) brightness(1) saturate(1.15);
-    opacity: 0.8;
+    opacity: 0.85;
+    mask-image: 
+        radial-gradient(ellipse 95% 90% at 50% 35%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.95) 70%, rgba(0, 0, 0, 0) 100%);
+    -webkit-mask-image: 
+        radial-gradient(ellipse 95% 90% at 50% 35%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.95) 70%, rgba(0, 0, 0, 0) 100%);
 }
 
 /* Light mode - completely hide the glow overlay on robot */
@@ -1602,10 +1606,11 @@
     display: none;
 }
 
-/* Light mode - subtle bottom fade only */
+/* Light mode - no overlay/fog effect - clear background */
 :root.light .cosmic-dashboard .ai-robot-bg::after,
 [data-theme="light"] .cosmic-dashboard .ai-robot-bg::after {
-    background: linear-gradient(to bottom, transparent 0%, transparent 80%, rgba(248, 250, 252, 0.9) 100%);
+    background: none;
+    display: none;
 }
 
 /* Light mode - hide cosmic gradient completely */

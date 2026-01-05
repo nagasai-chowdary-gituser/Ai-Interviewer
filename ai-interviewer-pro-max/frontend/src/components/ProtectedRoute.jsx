@@ -13,6 +13,8 @@
  * - Handles ECONNREFUSED gracefully
  * - No retry spam on backend failure
  * - Single clean error message
+ * 
+ * Note: Maintenance mode is now handled at App.jsx level
  */
 
 import React, { useEffect, useState } from 'react';
@@ -137,4 +139,3 @@ function ProtectedRoute({ children }) {
 }
 
 export default ProtectedRoute;
-

@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Announcements from '../components/Announcements';
 import { userApi, getStoredUser } from '../services/api';
 import { loadDashboardData } from '../services/userDataService';
 import { getCachedAnalytics, getInterviewHistory } from '../services/interviewStorage';
@@ -130,6 +131,9 @@ function Dashboard() {
             <Navbar user={user} />
 
             <main className="cosmic-main">
+                {/* Announcements Banner */}
+                <Announcements />
+
                 {error && (
                     <div className="cosmic-error">
                         <span>{error}</span>

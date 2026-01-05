@@ -6,6 +6,7 @@ Based on resume, ATS analysis, and interview performance.
 """
 
 import json
+import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.evaluations.models import AnswerEvaluation
 from app.resumes.models import Resume
 from app.ats.models import ATSAnalysis
 from app.interviews.live_models import LiveInterviewSession
+from app.admin.service import AIAPILogService
 
 
 class RoadmapService:
@@ -413,8 +415,23 @@ Make it:
 4. No external URLs required
 5. Professional and encouraging tone"""
 
+            start_time = time.time()
             response = client.generate_content(prompt)
             result_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="generate_career_roadmap",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini call: {log_error}")
             
             if "{" in result_text:
                 json_str = result_text[result_text.find("{"):result_text.rfind("}")+1]

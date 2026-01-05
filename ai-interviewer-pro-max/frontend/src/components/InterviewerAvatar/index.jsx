@@ -940,8 +940,8 @@ function GLBAvatar({ speaking, audioLevel, theme }) {
     });
 
     return (
-        <group ref={groupRef}>
-            <primitive object={scene} />
+        <group ref={groupRef} position={[0, 0, 0]}>
+            <primitive object={scene} position={[0, 0, 0]} />
         </group>
     );
 }
@@ -1118,11 +1118,21 @@ function InterviewerAvatar({
             </div>
 
             <Canvas
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%'
+                }}
                 dpr={AVATAR_CONFIG.dpr}
                 gl={{ antialias: true, alpha: false }}
                 camera={{ fov: 22, position: [0, 0.25, 1.8], near: 0.1, far: 100 }}
-                onCreated={({ camera }) => {
+                onCreated={({ camera, gl }) => {
                     camera.lookAt(0, 0.2, 0);
+                    // Ensure canvas is centered
+                    gl.domElement.style.display = 'block';
+                    gl.domElement.style.margin = '0 auto';
                     setIsLoaded(true);
                 }}
                 onError={() => setHasError(true)}

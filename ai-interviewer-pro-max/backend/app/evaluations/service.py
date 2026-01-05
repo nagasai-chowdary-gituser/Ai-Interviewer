@@ -11,6 +11,7 @@ Per AI Responsibility Split (Step 4):
 """
 
 import json
+import time
 import hashlib
 from datetime import datetime
 from typing import Dict, Any, List, Optional
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.evaluations.models import AnswerEvaluation
+from app.admin.service import AIAPILogService
 
 
 class EvaluationService:
@@ -547,6 +549,7 @@ Be concise. Score based on how well the answer addresses the question."""
 
             # Use currently supported model (mixtral-8x7b-32768 is decommissioned)
             model = "llama-3.1-8b-instant"
+            start_time = time.time()
             
             response = client.chat.completions.create(
                 model=model,
@@ -559,6 +562,27 @@ Be concise. Score based on how well the answer addresses the question."""
             )
             
             result_text = response.choices[0].message.content.strip()
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Groq API call
+            try:
+                prompt_tokens = getattr(response.usage, 'prompt_tokens', None) if hasattr(response, 'usage') else None
+                completion_tokens = getattr(response.usage, 'completion_tokens', None) if hasattr(response, 'usage') else None
+                total_tokens = getattr(response.usage, 'total_tokens', None) if hasattr(response, 'usage') else None
+                
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="groq",
+                    operation="quick_answer_evaluation",
+                    model=model,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Groq call: {log_error}")
             
             # Parse JSON response
             try:
@@ -580,7 +604,22 @@ Be concise. Score based on how well the answer addresses the question."""
             return self._generate_mock_quick_evaluation(question_text, answer_text)
             
         except Exception as e:
-            print(f"[Groq Evaluation Error] Model: llama-3.1-8b-instant, Error: {e}")
+            error_msg = str(e)
+            print(f"[Groq Evaluation Error] Model: llama-3.1-8b-instant, Error: {error_msg}")
+            
+            # Log failed Groq API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="groq",
+                    operation="quick_answer_evaluation",
+                    model="llama-3.1-8b-instant",
+                    status="error",
+                    error_message=error_msg[:500]
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Groq error: {log_error}")
+            
             return self._generate_mock_quick_evaluation(question_text, answer_text)
     
     # ===========================================
@@ -644,8 +683,23 @@ Provide your evaluation in this JSON format:
 
 Be constructive and professional. Provide actionable feedback."""
 
+            start_time = time.time()
             response = client.generate_content(prompt)
             result_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="deep_answer_evaluation",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini call: {log_error}")
             
             # Parse JSON response
             try:
@@ -688,7 +742,22 @@ Be constructive and professional. Provide actionable feedback."""
             return self._generate_mock_deep_evaluation(question_text, answer_text, question_type)
             
         except Exception as e:
-            print(f"Gemini evaluation error: {e}")
+            error_msg = str(e)
+            print(f"Gemini evaluation error: {error_msg}")
+            
+            # Log failed Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="deep_answer_evaluation",
+                    model="gemini-pro",
+                    status="error",
+                    error_message=error_msg[:500]
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini error: {log_error}")
+            
             return self._generate_mock_deep_evaluation(question_text, answer_text, question_type)
     
     # ===========================================

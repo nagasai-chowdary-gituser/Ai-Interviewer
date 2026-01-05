@@ -16,6 +16,7 @@ Per AI Responsibility Split (Step 4):
 
 import re
 import json
+import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from collections import Counter
 
 from app.core.config import settings
 from app.simulation.models import AnswerBehavioralInsight, SessionBehavioralSummary
+from app.admin.service import AIAPILogService
 
 
 class BehavioralSimulationService:
@@ -401,8 +403,23 @@ Provide enhanced observations in JSON:
 
 Be professional and constructive. This is text-only inference."""
 
+            start_time_ai = time.time()
             response = client.generate_content(prompt)
             result_text = response.text
+            response_time_ms = int((time.time() - start_time_ai) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="behavioral_analysis",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini call: {log_error}")
             
             if "{" in result_text:
                 json_str = result_text[result_text.find("{"):result_text.rfind("}")+1]

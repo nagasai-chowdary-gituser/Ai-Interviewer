@@ -27,6 +27,7 @@ from app.interviews.question_pools import get_question_pool, QuestionPoolManager
 from app.resumes.models import Resume
 from app.ats.models import ATSAnalysis
 from app.companies.modes import get_company_profile, CompanyProfile
+from app.admin.service import AIAPILogService
 
 
 # Set up logging
@@ -708,8 +709,23 @@ class InterviewPlanService:
             }}
             """
             
+            start_time = time.time()
             response = client.generate_content(prompt)
             response_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="generate_interview_plan",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                logger.warning(f"Failed to log Gemini call: {log_error}")
             
             # Log raw response (first 500 chars)
             logger.info(f"Gemini raw response (first 500 chars): {response_text[:500]}")
@@ -896,8 +912,23 @@ Return JSON array:
 """
         
         try:
+            start_time = time.time()
             response = client.generate_content(prompt)
             response_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="generate_pressure_questions",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                logger.warning(f"Failed to log Gemini call: {log_error}")
             
             logger.info(f"Gemini pressure questions response (first 300 chars): {response_text[:300]}")
             

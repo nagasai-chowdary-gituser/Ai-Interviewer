@@ -62,8 +62,8 @@ class ErrorLog(Base):
             "severity": self.severity,
             "status": self.status,
             "resolved_by": self.resolved_by,
-            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "resolved_at": self.resolved_at.isoformat() + 'Z' if self.resolved_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
         }
 
 
@@ -108,7 +108,7 @@ class APIRequestLog(Base):
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
             "query_params": self.query_params,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
         }
 
 
@@ -144,7 +144,7 @@ class SystemSettings(Base):
             "description": self.description,
             "category": self.category,
             "is_sensitive": self.is_sensitive,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_at": self.updated_at.isoformat() + 'Z' if self.updated_at else None,
         }
 
 
@@ -200,9 +200,9 @@ class BugReport(Base):
             "status": self.status,
             "admin_notes": self.admin_notes,
             "assigned_to": self.assigned_to,
-            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "resolved_at": self.resolved_at.isoformat() + 'Z' if self.resolved_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() + 'Z' if self.updated_at else None,
         }
 
 
@@ -234,8 +234,8 @@ class APIUsage(Base):
             "api_key_id": self.api_key_id,
             "endpoint_group": self.endpoint_group,
             "request_count": self.request_count,
-            "period_start": self.period_start.isoformat() if self.period_start else None,
-            "period_end": self.period_end.isoformat() if self.period_end else None,
+            "period_start": self.period_start.isoformat() + 'Z' if self.period_start else None,
+            "period_end": self.period_end.isoformat() + 'Z' if self.period_end else None,
         }
 
 
@@ -281,9 +281,9 @@ class ThirdPartyIntegration(Base):
             "config": self.config,
             "is_enabled": self.is_enabled,
             "is_configured": self.is_configured,
-            "last_health_check": self.last_health_check.isoformat() if self.last_health_check else None,
+            "last_health_check": self.last_health_check.isoformat() + 'Z' if self.last_health_check else None,
             "health_status": self.health_status,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "updated_at": self.updated_at.isoformat() + 'Z' if self.updated_at else None,
         }
 
 
@@ -325,10 +325,10 @@ class Broadcast(Base):
             "type": self.type,
             "is_active": self.is_active,
             "view_count": self.view_count or 0,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "expires_at": self.expires_at.isoformat() + 'Z' if self.expires_at else None,
             "created_by": self.created_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() + 'Z' if self.updated_at else None,
         }
 
 
@@ -377,5 +377,5 @@ class AIAPILog(Base):
             "error_message": self.error_message,
             "user_id": self.user_id,
             "session_id": self.session_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
         }

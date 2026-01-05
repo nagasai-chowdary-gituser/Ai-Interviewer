@@ -8,6 +8,7 @@ Reports are IMMUTABLE after generation.
 """
 
 import json
+import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.reports.models import InterviewReport
 from app.evaluations.models import AnswerEvaluation
 from app.simulation.models import AnswerBehavioralInsight, SessionBehavioralSummary
 from app.interviews.live_models import LiveInterviewSession, InterviewAnswer
+from app.admin.service import AIAPILogService
 
 
 class ReportService:
@@ -586,8 +588,23 @@ Generate in JSON format:
 
 Be professional, constructive, and specific. Avoid vague praise."""
 
+            start_time = time.time()
             response = client.generate_content(prompt)
             result_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="generate_report_narrative",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini call: {log_error}")
             
             if "{" in result_text:
                 json_str = result_text[result_text.find("{"):result_text.rfind("}")+1]
@@ -600,7 +617,21 @@ Be professional, constructive, and specific. Avoid vague praise."""
                     "source": "gemini",
                 }
         except Exception as e:
-            print(f"Gemini report generation error: {e}")
+            error_msg = str(e)
+            print(f"Gemini report generation error: {error_msg}")
+            
+            # Log failed Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="generate_report_narrative",
+                    model="gemini-pro",
+                    status="error",
+                    error_message=error_msg[:500]
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini error: {log_error}")
         
         return self._generate_mock_narrative(technical_scores, behavioral_scores, strengths, weaknesses)
     

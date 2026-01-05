@@ -40,7 +40,8 @@ class ErrorBoundary extends React.Component {
     };
 
     handleGoHome = () => {
-        window.location.href = '/';
+        // Go directly to dashboard instead of root to avoid redirect loops
+        window.location.href = '/dashboard';
     };
 
     handleClearAndReload = () => {

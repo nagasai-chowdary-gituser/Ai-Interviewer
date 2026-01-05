@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.ats.models import ATSAnalysis
 from app.resumes.models import Resume
+from app.admin.service import AIAPILogService
 
 
 # ===========================================
@@ -801,8 +802,23 @@ Respond with JSON only:
 """
             
             # Call Gemini API
+            start_time = time.time()
             response = client.generate_content(prompt)
             response_text = response.text
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Log successful Gemini API call
+            try:
+                AIAPILogService.log_ai_call(
+                    db=self.db,
+                    provider="gemini",
+                    operation="ats_analysis",
+                    model="gemini-pro",
+                    response_time_ms=response_time_ms,
+                    status="success"
+                )
+            except Exception as log_error:
+                print(f"[AI Log Error] Failed to log Gemini call: {log_error}")
             
             # Parse JSON response
             try:

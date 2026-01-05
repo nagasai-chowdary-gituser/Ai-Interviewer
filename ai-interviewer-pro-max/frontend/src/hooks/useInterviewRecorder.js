@@ -42,6 +42,7 @@ export default function useInterviewRecorder() {
     const streamRef = useRef(null);
     const durationIntervalRef = useRef(null);
     const startTimeRef = useRef(null);
+    const stopResolverRef = useRef(null); // Promise resolver for stopRecording
 
     // Check browser support
     useEffect(() => {
@@ -108,12 +109,19 @@ export default function useInterviewRecorder() {
             };
 
             recorder.onstop = () => {
+                let blob = null;
                 if (chunksRef.current.length > 0) {
-                    const blob = new Blob(chunksRef.current, { type: mimeType });
+                    blob = new Blob(chunksRef.current, { type: mimeType });
                     setRecordingBlob(blob);
                 }
                 setIsRecording(false);
                 setIsPaused(false);
+                
+                // Resolve the stop promise with the blob
+                if (stopResolverRef.current) {
+                    stopResolverRef.current(blob);
+                    stopResolverRef.current = null;
+                }
             };
 
             recorder.onerror = (event) => {
@@ -146,27 +154,31 @@ export default function useInterviewRecorder() {
     }, [isSupported]);
 
     /**
-     * Stop recording
+     * Stop recording - Returns a Promise that resolves with the blob when ready
      */
     const stopRecording = useCallback(() => {
-        if (durationIntervalRef.current) {
-            clearInterval(durationIntervalRef.current);
-            durationIntervalRef.current = null;
-        }
-
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            try {
-                mediaRecorderRef.current.stop();
-            } catch (e) {
-                console.warn('Error stopping recorder:', e);
+        return new Promise((resolve) => {
+            if (durationIntervalRef.current) {
+                clearInterval(durationIntervalRef.current);
+                durationIntervalRef.current = null;
             }
-        }
 
-        // Note: We don't stop the stream here as it might be used by the interview
-        // The caller should manage the stream lifecycle
-
-        setIsRecording(false);
-        setIsPaused(false);
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                // Store the resolver to be called in onstop
+                stopResolverRef.current = resolve;
+                try {
+                    mediaRecorderRef.current.stop();
+                } catch (e) {
+                    console.warn('Error stopping recorder:', e);
+                    resolve(null);
+                }
+            } else {
+                // Already stopped, resolve immediately
+                setIsRecording(false);
+                setIsPaused(false);
+                resolve(null);
+            }
+        });
     }, []);
 
     /**

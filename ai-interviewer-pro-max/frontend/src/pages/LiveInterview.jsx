@@ -2,6 +2,7 @@
  * Live Interview Page - PRODUCTION-GRADE V3 Experience
  * 
  * Features:
+ * - CINEMATIC FULLSCREEN MODE with ESC key toggle
  * - AVATAR-DOMINANT layout (65% avatar LEFT, 35% chat RIGHT)
  * - Proper camera/mic permission flow
  * - Auto mic handoff after TTS finishes
@@ -33,7 +34,8 @@ import '../components/PerformanceSummary.css';
 import {
     Send, SkipForward, Pause, Play, Square, Eye, EyeOff,
     AlertCircle, CheckCircle, Loader2, Sparkles, MessageSquare,
-    Mic, MicOff, Volume2, VolumeX, Paperclip, Clock, Activity
+    Mic, MicOff, Volume2, VolumeX, Paperclip, Clock, Activity,
+    Maximize2, Minimize2
 } from 'lucide-react';
 
 // Debounce utility for performance
@@ -53,6 +55,60 @@ function LiveInterview() {
     const inputRef = useRef(null);
 
     const user = getStoredUser();
+
+    // ===========================================
+    // FULLSCREEN MODE STATE (CINEMATIC EXPERIENCE)
+    // ===========================================
+    const [isFullscreen, setIsFullscreen] = useState(true); // Start in fullscreen by default
+
+    // ESC key handler for fullscreen toggle
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsFullscreen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // NUCLEAR: Add/remove body class for fullscreen mode
+    // This bypasses ALL parent container constraints
+    useEffect(() => {
+        if (isFullscreen) {
+            // Lock everything
+            document.body.classList.add('interview-fullscreen-active');
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100vw';
+            document.body.style.height = '100vh';
+            document.documentElement.style.overflow = 'hidden';
+        } else {
+            // Release
+            document.body.classList.remove('interview-fullscreen-active');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.documentElement.style.overflow = '';
+        }
+        return () => {
+            // Cleanup on unmount
+            document.body.classList.remove('interview-fullscreen-active');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.documentElement.style.overflow = '';
+        };
+    }, [isFullscreen]);
+
+    // Toggle fullscreen mode
+    const toggleFullscreen = useCallback(() => {
+        setIsFullscreen(prev => !prev);
+    }, []);
 
     // ===========================================
     // CORE STATE
@@ -910,6 +966,22 @@ function LiveInterview() {
     }, [timerData.timeRemaining, timerData.timedOutQuestions, isAnalyticsEnabled, progress, submitting, answer]);
 
     // ===========================================
+    // AUTO-START VIDEO RECORDING WHEN CAMERA READY (Strict/High-Pressure)
+    // ===========================================
+    useEffect(() => {
+        // Only start recording for strict/stress modes when:
+        // 1. Interview is in progress
+        // 2. Camera is ready
+        // 3. Recording is supported
+        // 4. Not already recording
+        const shouldRecord = (persona === 'strict' || persona === 'stress');
+        if (shouldRecord && status === 'in_progress' && isCameraReady && recordingSupported && !isRecording) {
+            console.log('[Recording] Auto-starting video recording for', persona, 'mode (camera just became ready)');
+            startRecording();
+        }
+    }, [persona, status, isCameraReady, recordingSupported, isRecording, startRecording]);
+
+    // ===========================================
     // CLEANUP ON UNMOUNT
     // ===========================================
     useEffect(() => {
@@ -1279,9 +1351,13 @@ function LiveInterview() {
             // Cleanup webcam/camera state
             resetEyeContactState();
 
-            // Stop recording and offer download
+            // Stop recording and wait for blob - CRITICAL: await the promise
+            let finalBlob = recordingBlob;
             if (isRecording) {
-                stopRecording();
+                const stoppedBlob = await stopRecording();
+                if (stoppedBlob) {
+                    finalBlob = stoppedBlob;
+                }
             }
 
             // Stop analytics video recording
@@ -1290,9 +1366,9 @@ function LiveInterview() {
             }
 
             // Save video blob to IndexedDB before navigating (for strict/high-pressure modes)
-            if (recordingBlob) {
+            if (finalBlob) {
                 try {
-                    await saveVideoBlob(sessionId, recordingBlob);
+                    await saveVideoBlob(sessionId, finalBlob);
                     console.log('[Recording] Video blob saved on early end');
                 } catch (err) {
                     console.warn('[Recording] Failed to save video blob:', err);
@@ -1334,9 +1410,13 @@ function LiveInterview() {
         // Cleanup webcam/camera state
         resetEyeContactState();
 
-        // Stop and save recording from main recorder
+        // Stop and save recording from main recorder - CRITICAL: await the promise
+        let finalBlob = recordingBlob;
         if (isRecording) {
-            stopRecording();
+            const stoppedBlob = await stopRecording();
+            if (stoppedBlob) {
+                finalBlob = stoppedBlob;
+            }
         }
 
         // Stop analytics video recording if active
@@ -1346,9 +1426,9 @@ function LiveInterview() {
 
         // Save video blob to IndexedDB for persistent access on Report page
         // Blob URLs don't survive page navigation, so we use IndexedDB
-        if (recordingBlob) {
+        if (finalBlob) {
             try {
-                await saveVideoBlob(sessionId, recordingBlob);
+                await saveVideoBlob(sessionId, finalBlob);
                 console.log('[Recording] Video blob saved to IndexedDB for report page download');
             } catch (err) {
                 console.warn('[Recording] Failed to save video blob:', err);
@@ -1481,8 +1561,44 @@ function LiveInterview() {
     // RENDER: MAIN INTERVIEW UI
     // ===========================================
     return (
-        <div className="live-interview-container">
-            <Navbar user={user} minimal />
+        <div className={`live-interview-container ${isFullscreen ? 'fullscreen-mode' : 'windowed-mode'}`}>
+            {/* NAVBAR - Only visible in windowed mode */}
+            {!isFullscreen && <Navbar user={user} minimal />}
+
+            {/* FULLSCREEN CONTROLS BAR - Always visible in fullscreen */}
+            {isFullscreen && (
+                <div className="fullscreen-controls-bar">
+                    <div className="fc-left">
+                        <span className="fc-logo">🤖 AI Interviewer</span>
+                        <span className={`persona-badge ${personaDisplay.color}`}>
+                            {personaDisplay.icon} {personaDisplay.label}
+                        </span>
+                    </div>
+                    <div className="fc-center">
+                        {progress && (
+                            <span className="fc-progress">
+                                Question {progress.current_question} / {progress.total_questions}
+                            </span>
+                        )}
+                    </div>
+                    <div className="fc-right">
+                        <button
+                            className="fc-btn"
+                            onClick={toggleFullscreen}
+                            title="Exit Fullscreen (ESC)"
+                        >
+                            <Minimize2 size={18} />
+                        </button>
+                        <button
+                            className="fc-btn exit-btn"
+                            onClick={() => navigate('/dashboard')}
+                            title="Exit Interview"
+                        >
+                            Exit
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ROUND TRANSITION OVERLAY - Full-screen popup for ALL rounds */}
             {showRoundTransition && roundTransitionData && (
@@ -1630,19 +1746,25 @@ function LiveInterview() {
                                             <Volume2 size={18} />
                                         </button>
                                     )}
-                                    <button className="header-icon-btn" title="Fullscreen">
-                                        <Square size={18} />
+                                    <button 
+                                        className="header-icon-btn" 
+                                        title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
+                                        onClick={toggleFullscreen}
+                                    >
+                                        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                                     </button>
                                 </div>
                             </div>
-                            {/* Avatar Canvas */}
-                            <InterviewerAvatar
-                                speaking={isSpeaking || conversationState === 'bot_speaking'}
-                                listening={conversationState === 'user_turn' || isListening}
-                                audioLevel={audioLevel}
-                                enabled={avatarEnabled}
-                                enableWebcam={status === 'in_progress' && isCameraReady}
-                            />
+                            {/* Avatar Canvas - Takes remaining space */}
+                            <div className="avatar-wrapper">
+                                <InterviewerAvatar
+                                    speaking={isSpeaking || conversationState === 'bot_speaking'}
+                                    listening={conversationState === 'user_turn' || isListening}
+                                    audioLevel={audioLevel}
+                                    enabled={avatarEnabled}
+                                    enableWebcam={status === 'in_progress' && isCameraReady}
+                                />
+                            </div>
                         </div>
                     )}
 
