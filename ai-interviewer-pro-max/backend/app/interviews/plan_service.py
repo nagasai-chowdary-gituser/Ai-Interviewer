@@ -776,6 +776,359 @@ class InterviewPlanService:
             return result
     
     # ===========================================
+    # STRICT/STRESS MODE: ENHANCED QUESTION GENERATION
+    # ===========================================
+    
+    async def _generate_pressure_mode_questions(
+        self,
+        target_role: str,
+        skills: List[str],
+        question_count: int,
+        difficulty: str,
+        persona: str,
+        resume_summary: str = "",
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate high-pressure interview questions using Gemini API.
+        
+        Designed for STRICT and STRESS personality modes to create:
+        - More challenging questions with edge cases
+        - Multi-part questions that test depth
+        - Time-constrained scenarios
+        - Trade-off analysis questions
+        
+        Args:
+            target_role: Target job role
+            skills: Extracted skills from resume
+            question_count: Number of questions to generate
+            difficulty: Difficulty level
+            persona: "strict" or "stress"
+            resume_summary: Brief resume summary for personalization
+            
+        Returns:
+            List of challenging questions
+        """
+        client = self._get_gemini_client()
+        
+        if not client:
+            logger.info("No Gemini client for pressure questions, using enhanced pool")
+            return self._generate_enhanced_pool_questions(
+                target_role, skills, question_count, difficulty, persona
+            )
+        
+        # Build persona-specific prompt
+        if persona == "stress":
+            pressure_instruction = """
+INTERVIEW STYLE: HIGH-PRESSURE / STRESS TEST
+
+Generate questions that:
+1. Include time constraints ("You have 5 minutes to explain...")
+2. Add complications or edge cases
+3. Require quick thinking and clear prioritization
+4. Test composure under pressure
+5. Demand specific metrics and numbers
+6. Include multi-part challenges
+
+Example question styles:
+- "In 2 minutes, design a solution for X that handles 1M users with <100ms latency. What are your top 3 trade-offs?"
+- "Your deployment just failed in production with users complaining. Walk me through your first 60 seconds."
+- "Give me 3 specific examples where you had to say no to a stakeholder. What was the outcome?"
+"""
+        else:  # strict
+            pressure_instruction = """
+INTERVIEW STYLE: STRICT / NO-NONSENSE
+
+Generate questions that:
+1. Demand precise, specific answers
+2. Probe for evidence and metrics
+3. Challenge claims directly
+4. Expect depth of knowledge
+5. Allow no room for vague responses
+6. Test technical precision
+
+Example question styles:
+- "Walk me through the exact architecture you designed. I want component names, data flows, and failure modes."
+- "What specific metrics improved after your optimization? Give me before/after numbers."
+- "Describe a technical decision you made that failed. What was wrong with your reasoning?"
+"""
+        
+        prompt = f"""
+Generate {question_count} challenging interview questions for a {target_role} position.
+
+{pressure_instruction}
+
+CANDIDATE SKILLS: {', '.join(skills[:10]) if skills else 'General software development'}
+
+DIFFICULTY: {difficulty.upper()}
+
+RESUME CONTEXT: {resume_summary[:500] if resume_summary else 'No specific resume context'}
+
+QUESTION MIX REQUIREMENTS:
+- 40% Technical/System Design (challenging, with constraints)
+- 25% Behavioral (specific STAR scenarios with accountability)
+- 20% Problem Solving (trade-offs, prioritization)
+- 15% Situational (pressure scenarios)
+
+For EACH question, provide:
+1. The question text (challenging, specific)
+2. Type (technical, behavioral, dsa, system_design, situational)
+3. Expected answer key points
+4. Red flags to watch for
+5. A follow-up probe question
+
+Return JSON array:
+[
+    {{
+        "id": "q-1",
+        "text": "challenging question text",
+        "type": "technical|behavioral|dsa|system_design|situational",
+        "category": "category name",
+        "difficulty": "{difficulty}",
+        "time_limit_seconds": 180,
+        "expected_topics": ["topic1", "topic2"],
+        "scoring_rubric": {{
+            "key_points": ["point1", "point2"],
+            "red_flags": ["flag1", "flag2"]
+        }},
+        "follow_up_probe": "challenging follow-up question"
+    }}
+]
+"""
+        
+        try:
+            response = client.generate_content(prompt)
+            response_text = response.text
+            
+            logger.info(f"Gemini pressure questions response (first 300 chars): {response_text[:300]}")
+            
+            # Parse JSON
+            if "```json" in response_text:
+                json_start = response_text.find("```json") + 7
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+            elif "```" in response_text:
+                json_start = response_text.find("```") + 3
+                json_end = response_text.find("```", json_start)
+                response_text = response_text[json_start:json_end].strip()
+            
+            questions = json.loads(response_text)
+            
+            # Add persona tag to each question
+            for q in questions:
+                q["persona_mode"] = persona
+                q["pressure_level"] = "high" if persona == "stress" else "medium"
+            
+            logger.info(f"Generated {len(questions)} pressure-mode questions via Gemini")
+            return questions
+            
+        except Exception as e:
+            logger.error(f"Gemini pressure question generation failed: {e}")
+            return self._generate_enhanced_pool_questions(
+                target_role, skills, question_count, difficulty, persona
+            )
+    
+    def _generate_enhanced_pool_questions(
+        self,
+        target_role: str,
+        skills: List[str],
+        question_count: int,
+        difficulty: str,
+        persona: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate enhanced challenging questions from the pool.
+        
+        Fallback when API is not available but still provides
+        challenging questions for strict/stress modes.
+        """
+        questions = []
+        q_id = 1
+        
+        # Challenging technical templates for strict/stress modes
+        if persona == "stress":
+            tech_templates = [
+                f"You have 3 minutes. Design a system that handles 10M daily active users for {target_role.lower()}. What are your top 3 scaling challenges?",
+                f"Your {skills[0] if skills else 'primary system'} is down in production with 10,000 users affected. Walk me through your first 5 actions.",
+                f"Explain the trade-offs between consistency and availability in a distributed system. Give me a specific example from your experience.",
+                f"You need to optimize a query that's taking 30 seconds. What are your first 3 hypotheses and how do you test each?",
+                f"Design a rate limiter that handles 1M requests/second with <5ms latency. What data structures would you use and why?",
+            ]
+            behav_templates = [
+                "Tell me about a time you pushed back on your manager's decision. What was the outcome? Would you do it again?",
+                "Describe a project where you failed to meet the deadline. What specifically went wrong with YOUR planning?",
+                "Give me 3 examples where you had to make an unpopular technical decision. How did you handle the pushback?",
+                "When was the last time you admitted you were wrong in front of your team? What did you learn?",
+            ]
+        else:  # strict
+            tech_templates = [
+                f"Walk me through the exact architecture of the most complex system you've built. I want component names and data flows.",
+                f"What specific performance improvements did you achieve in your last optimization project? Give me before/after numbers.",
+                f"Describe a technical decision you made that you later regretted. What was wrong with your reasoning?",
+                f"Explain how you would debug a memory leak in a production {skills[0] if skills else 'application'}. Be specific about tools and steps.",
+                f"What are the exact trade-offs between SQL and NoSQL for {target_role.lower()} use cases? Give concrete examples.",
+            ]
+            behav_templates = [
+                "Describe a conflict with a senior engineer where you disagreed on architecture. How did you resolve it?",
+                "Tell me about a time you delivered something that wasn't what the stakeholder wanted. What happened?",
+                "Give me a specific example of receiving critical feedback. What exactly did you change?",
+                "When did you last take ownership of a bug you didn't create? Walk me through your actions.",
+            ]
+        
+        # Generate questions
+        tech_count = int(question_count * 0.5)
+        behav_count = int(question_count * 0.3)
+        other_count = question_count - tech_count - behav_count
+        
+        for i in range(tech_count):
+            questions.append({
+                "id": f"q-{q_id}",
+                "text": tech_templates[i % len(tech_templates)],
+                "type": "technical",
+                "category": "Technical Deep-Dive",
+                "difficulty": difficulty,
+                "time_limit_seconds": 180,
+                "expected_topics": skills[:3] if skills else ["system design", "problem solving"],
+                "scoring_rubric": {
+                    "key_points": ["Specific details", "Trade-off analysis", "Real examples"],
+                    "red_flags": ["Vague answers", "No metrics", "Avoids specifics"],
+                },
+                "persona_mode": persona,
+                "pressure_level": "high" if persona == "stress" else "medium",
+            })
+            q_id += 1
+        
+        for i in range(behav_count):
+            questions.append({
+                "id": f"q-{q_id}",
+                "text": behav_templates[i % len(behav_templates)],
+                "type": "behavioral",
+                "category": "Behavioral",
+                "difficulty": "medium",
+                "time_limit_seconds": 180,
+                "expected_topics": ["STAR method", "Accountability", "Learning"],
+                "scoring_rubric": {
+                    "key_points": ["Specific example", "Personal accountability", "Clear outcome"],
+                    "red_flags": ["Blaming others", "Vague timeline", "No learning"],
+                },
+                "persona_mode": persona,
+                "pressure_level": "high" if persona == "stress" else "medium",
+            })
+            q_id += 1
+        
+        # Add situational questions
+        situational_templates = [
+            "You discover a critical security vulnerability 2 hours before a major release. What do you do?",
+            "Your team is divided 50/50 on a technical approach and you need to ship in 3 days. How do you decide?",
+            "A junior developer's code caused a production outage. How do you handle the immediate situation and the aftermath?",
+        ]
+        
+        for i in range(other_count):
+            questions.append({
+                "id": f"q-{q_id}",
+                "text": situational_templates[i % len(situational_templates)],
+                "type": "situational",
+                "category": "Situational",
+                "difficulty": difficulty,
+                "time_limit_seconds": 150,
+                "expected_topics": ["Decision-making", "Prioritization", "Communication"],
+                "scoring_rubric": {
+                    "key_points": ["Clear reasoning", "Stakeholder awareness", "Action-oriented"],
+                    "red_flags": ["Indecisive", "Ignores consequences", "Poor judgment"],
+                },
+                "persona_mode": persona,
+                "pressure_level": "high" if persona == "stress" else "medium",
+            })
+            q_id += 1
+        
+        return questions
+    
+    def _build_pressure_mode_plan(
+        self,
+        questions: List[Dict[str, Any]],
+        target_role: str,
+        session_type: str,
+        difficulty: str,
+        question_count: int,
+        company_mode: Optional[str],
+        skills: List[str],
+        persona: str,
+    ) -> Dict[str, Any]:
+        """
+        Build a complete plan data structure for pressure mode questions.
+        
+        Takes generated pressure questions and wraps them in the 
+        standard plan format.
+        """
+        # Count question types
+        tech_count = sum(1 for q in questions if q.get("type") in ["technical", "system_design"])
+        dsa_count = sum(1 for q in questions if q.get("type") == "dsa")
+        behav_count = sum(1 for q in questions if q.get("type") == "behavioral")
+        hr_count = sum(1 for q in questions if q.get("type") == "hr")
+        sit_count = sum(1 for q in questions if q.get("type") == "situational")
+        
+        # Build categories
+        question_categories = []
+        if tech_count + dsa_count > 0:
+            question_categories.append({
+                "category": "Technical",
+                "count": tech_count + dsa_count,
+                "difficulty": difficulty,
+                "rationale": "High-pressure technical assessment",
+            })
+        if behav_count > 0:
+            question_categories.append({
+                "category": "Behavioral",
+                "count": behav_count,
+                "difficulty": "medium",
+                "rationale": "Accountability and leadership assessment",
+            })
+        if sit_count > 0:
+            question_categories.append({
+                "category": "Situational",
+                "count": sit_count,
+                "difficulty": difficulty,
+                "rationale": "Decision-making under pressure",
+            })
+        
+        # Build pressure-specific summary
+        pressure_label = "HIGH-PRESSURE" if persona == "stress" else "STRICT"
+        summary = (
+            f"This is a {pressure_label} interview plan for {target_role}. "
+            f"You'll face {len(questions)} challenging questions designed to test your depth of knowledge "
+            f"and ability to perform under pressure. Expect probing follow-ups, requests for specific metrics, "
+            f"and scenarios that require quick, clear thinking. "
+            f"Focus on: specific examples, concrete numbers, trade-off analysis, and clear reasoning."
+        )
+        
+        return {
+            "session_type": session_type,
+            "difficulty_level": difficulty,
+            "total_questions": len(questions),
+            "estimated_duration_minutes": len(questions) * 4,  # More time for challenging questions
+            "dsa_question_count": dsa_count,
+            "technical_question_count": tech_count,
+            "behavioral_question_count": behav_count,
+            "hr_question_count": hr_count,
+            "situational_question_count": sit_count,
+            "question_categories": question_categories,
+            "strength_focus_areas": [
+                {"area": "Depth Probing", "reason": "Testing true expertise", "question_count": 3},
+            ],
+            "weakness_focus_areas": [
+                {"area": "Pressure Handling", "reason": "Assessing composure", "question_count": 2},
+            ],
+            "skills_to_test": skills[:10],
+            "questions": questions,
+            "rounds": [],  # Pressure mode doesn't use rounds
+            "summary": summary,
+            "rationale": f"{pressure_label} interview mode with API-generated challenging questions.",
+            "company_mode": company_mode,
+            "company_info": None,
+            "plan_generated_via": "gemini_pressure" if settings.is_gemini_configured() else "pool_pressure",
+            "persona_mode": persona,
+        }
+    
+    # ===========================================
     # PUBLIC API
     # ===========================================
     
@@ -790,6 +1143,7 @@ class InterviewPlanService:
         question_count: int = 10,
         company_mode: Optional[str] = None,
         round_config: Optional[Dict[str, int]] = None,
+        persona: Optional[str] = None,
     ) -> InterviewPlan:
         """
         Generate a personalized interview plan.
@@ -807,6 +1161,7 @@ class InterviewPlanService:
             question_count: Total number of questions
             company_mode: Company interview mode
             round_config: Optional per-round question counts {dsa_questions, technical_questions, etc}
+            persona: Interviewer personality mode (strict, stress, friendly, neutral)
         
         GUARANTEED: Always returns a valid plan, never throws.
         """
@@ -822,6 +1177,7 @@ class InterviewPlanService:
         logger.info(f"question_count: {question_count}")
         logger.info(f"company_mode: {company_mode}")
         logger.info(f"round_config: {round_config}")
+        logger.info(f"persona: {persona}")
         
         # Get resume text (with fallback)
         resume_text = resume.text_content or ""
@@ -840,14 +1196,50 @@ class InterviewPlanService:
         except Exception as e:
             logger.warning(f"Failed to fetch ATS analysis: {e}")
         
+        # Extract skills for pressure mode
+        skills = []
+        if ats_analysis:
+            skills = [s.get("name", s) if isinstance(s, dict) else s 
+                     for s in (ats_analysis.skills_extracted or [])[:10]]
+        elif resume_text:
+            skills = self._extract_mock_skills(resume_text)
+        
         # Determine generation source and generate plan
         try:
             use_gemini = settings.is_gemini_configured()
             logger.info(f"Gemini configured: {use_gemini}")
             
+            # ===========================================
+            # STRICT/STRESS MODE: Use pressure questions
+            # ===========================================
+            if persona in ["strict", "stress"] and use_gemini:
+                logger.info(f"Using PRESSURE MODE question generation for persona: {persona}")
+                
+                # Generate pressure-mode questions via API
+                pressure_questions = await self._generate_pressure_mode_questions(
+                    target_role=target_role,
+                    skills=skills,
+                    question_count=question_count,
+                    difficulty=difficulty,
+                    persona=persona,
+                    resume_summary=resume_text[:500],
+                )
+                
+                # Build plan data with pressure questions
+                plan_data = self._build_pressure_mode_plan(
+                    questions=pressure_questions,
+                    target_role=target_role,
+                    session_type=session_type,
+                    difficulty=difficulty,
+                    question_count=question_count,
+                    company_mode=company_mode,
+                    skills=skills,
+                    persona=persona,
+                )
+                
             # CRITICAL: If user provided round_config, use pool-based generation
             # because Gemini will NOT respect the exact per-round question counts
-            if round_config:
+            elif round_config:
                 logger.info(f"Using pool-based generation for explicit round_config: {round_config}")
                 plan_data = self._generate_mock_plan(
                     resume_text, ats_analysis, target_role,

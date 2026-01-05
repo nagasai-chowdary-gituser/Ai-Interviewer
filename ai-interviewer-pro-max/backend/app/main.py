@@ -31,6 +31,14 @@ from app.companies.routes import router as companies_router
 from app.personalities.routes import router as personalities_router
 from app.analytics.routes import router as analytics_router
 from app.admin.routes import router as admin_router
+from app.admin.public_routes import router as admin_public_router
+
+# Import admin middleware
+from app.admin.middleware import (
+    APILoggingMiddleware,
+    ErrorLoggingMiddleware,
+    MaintenanceModeMiddleware
+)
 
 
 # ===========================================
@@ -51,16 +59,48 @@ async def lifespan(app: FastAPI):
     init_db()
     print("✅ Database initialized")
     
-    # Check API keys (log warnings, never log actual keys)
-    if settings.GEMINI_API_KEY:
-        print("✅ Gemini API configured")
-    else:
-        print("⚠️  Gemini API NOT configured - AI features will use mock data")
-    
-    if settings.GROQ_API_KEY:
-        print("✅ Groq API configured")
-    else:
-        print("⚠️  Groq API NOT configured - Real-time features will use mock data")
+    # Load API keys from database (overrides .env if set)
+    try:
+        from app.db.session import SessionLocal
+        from app.admin.service import SettingsService
+        db = SessionLocal()
+        try:
+            # Initialize settings
+            SettingsService.initialize_settings(db)
+            
+            # Check for database overrides
+            db_gemini = SettingsService.get_setting(db, "gemini_api_key", "")
+            db_groq = SettingsService.get_setting(db, "groq_api_key", "")
+            
+            if db_gemini:
+                settings.GEMINI_API_KEY = db_gemini
+                print("✅ Gemini API configured (from database)")
+            elif settings.GEMINI_API_KEY:
+                print("✅ Gemini API configured (from .env)")
+            else:
+                print("⚠️  Gemini API NOT configured - AI features will use mock data")
+            
+            if db_groq:
+                settings.GROQ_API_KEY = db_groq
+                print("✅ Groq API configured (from database)")
+            elif settings.GROQ_API_KEY:
+                print("✅ Groq API configured (from .env)")
+            else:
+                print("⚠️  Groq API NOT configured - Real-time features will use mock data")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"⚠️  Could not load API keys from database: {e}")
+        # Fall back to .env settings
+        if settings.GEMINI_API_KEY:
+            print("✅ Gemini API configured")
+        else:
+            print("⚠️  Gemini API NOT configured - AI features will use mock data")
+        
+        if settings.GROQ_API_KEY:
+            print("✅ Groq API configured")
+        else:
+            print("⚠️  Groq API NOT configured - Real-time features will use mock data")
     
     # Environment info
     print(f"📌 Environment: {settings.ENVIRONMENT}")
@@ -126,6 +166,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Admin middleware - Order matters: last added = first executed
+# 1. Error logging (catch unhandled exceptions)
+app.add_middleware(ErrorLoggingMiddleware)
+
+# 2. Maintenance mode check
+app.add_middleware(MaintenanceModeMiddleware)
+
+# 3. API request logging
+app.add_middleware(APILoggingMiddleware)
 
 
 # ===========================================
@@ -286,6 +336,14 @@ app.include_router(
     tags=["Admin"]
 )
 
+# Admin public routes (authenticated users)
+app.include_router(
+    admin_public_router, 
+    prefix="/api/public", 
+    tags=["Public"]
+)
+
+@app.get("/", tags=["Root"])
 async def root():
     """
     Root endpoint - API health check and welcome message.

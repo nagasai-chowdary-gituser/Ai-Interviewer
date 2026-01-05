@@ -413,6 +413,199 @@ Examples of BAD acknowledgments (NEVER use):
         }
     
     # ===========================================
+    # STRICT/STRESS MODE: PRESSURE FOLLOW-UPS
+    # ===========================================
+    
+    async def _generate_pressure_follow_up(
+        self,
+        persona: str,
+        question: str,
+        answer: str,
+        question_type: str,
+        quick_eval: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Generate a challenging follow-up question for strict/stress modes.
+        
+        Uses Groq API to create dynamic, probing follow-ups that:
+        - Challenge vague or incomplete answers
+        - Probe deeper into technical claims
+        - Test candidate's ability to think under pressure
+        - Maintain professional but intense tone
+        
+        Returns:
+            Dict with follow_up_text, probe_type, and intensity
+        """
+        profile = self._get_personality_profile(persona)
+        
+        # Determine probe type based on answer quality
+        relevance = quick_eval.get("relevance", 7)
+        flags = quick_eval.get("flags", [])
+        
+        if relevance < 5 or "off_topic" in flags:
+            probe_type = "redirect"
+            probe_instruction = "The answer was off-topic or unclear. Redirect firmly but professionally."
+        elif relevance < 7 or "too_short" in flags:
+            probe_type = "depth"
+            probe_instruction = "The answer lacked depth. Probe for specific details, numbers, or examples."
+        else:
+            probe_type = "challenge"
+            probe_instruction = "The answer was decent. Challenge their reasoning or ask about edge cases."
+        
+        # Build persona-specific instructions
+        if profile.id == "stress":
+            tone_instruction = """
+Tone: HIGH PRESSURE
+- Be concise and rapid
+- Add subtle time pressure ("Quickly now...")
+- Challenge their assumptions directly
+- Ask for specific metrics/numbers
+- Don't accept vague answers
+- Example: "That's one approach, but what happens when scale is 10x? Be specific."
+"""
+        else:  # strict
+            tone_instruction = """
+Tone: STRICT PROFESSIONAL
+- Be direct and no-nonsense
+- Probe for concrete evidence
+- Question any claims without backing
+- Expect precision in answers
+- Example: "You mentioned X. Walk me through the exact steps you took."
+"""
+        
+        # Build type-specific probing
+        type_instructions = {
+            "technical": "Focus on implementation details, trade-offs, and edge cases.",
+            "behavioral": "Probe for specific STAR details - what exactly did YOU do, what was the measurable outcome?",
+            "dsa": "Ask about time/space complexity, alternative approaches, or what happens with different inputs.",
+            "system_design": "Challenge scalability, ask about failure modes, or probe specific technology choices.",
+            "hr": "Probe for alignment with company values, ask about priorities and trade-offs.",
+        }
+        type_instruction = type_instructions.get(question_type, "Probe for more specific details.")
+        
+        messages = [
+            {
+                "role": "system",
+                "content": f"""You are a {profile.name} conducting a high-stakes interview.
+
+TASK: Generate ONE challenging follow-up question based on the candidate's answer.
+
+{tone_instruction}
+
+PROBE TYPE: {probe_type.upper()}
+{probe_instruction}
+
+QUESTION TYPE: {question_type}
+{type_instruction}
+
+RULES:
+1. ONE sentence only - concise and direct
+2. Reference something SPECIFIC from their answer
+3. Do NOT accept vague responses - demand specifics
+4. Do NOT be rude or unprofessional
+5. The question should test their depth of knowledge
+6. For technical questions, ask about edge cases or trade-offs
+7. For behavioral, ask about specific actions THEY took
+
+FORBIDDEN:
+- "That's interesting" or similar filler
+- Generic "can you elaborate" without specifics
+- Multiple questions in one
+- Overly long follow-ups"""
+            },
+            {
+                "role": "user",
+                "content": f"""Original Question: {question[:300]}
+
+Candidate's Answer: {answer[:600]}
+
+Generate ONE challenging follow-up question:"""
+            }
+        ]
+        
+        result = await self._ask_groq(messages, max_tokens=80)
+        
+        if result:
+            # Clean up the result
+            result = result.strip()
+            # Remove any quotation marks if present
+            if result.startswith('"') and result.endswith('"'):
+                result = result[1:-1]
+            
+            return {
+                "follow_up_text": result,
+                "probe_type": probe_type,
+                "intensity": "high" if profile.id == "stress" else "medium",
+            }
+        
+        # Fallback follow-ups
+        fallback_follow_ups = {
+            "strict": [
+                "Be more specific - what exactly did you do?",
+                "Walk me through the technical details.",
+                "What metrics can you cite to back that up?",
+            ],
+            "stress": [
+                "Quickly - what was the exact outcome?",
+                "Be specific. What numbers can you give me?",
+                "That's vague. What specifically did YOU do?",
+            ],
+        }
+        
+        import random
+        fallback_list = fallback_follow_ups.get(profile.id, fallback_follow_ups["strict"])
+        
+        return {
+            "follow_up_text": random.choice(fallback_list),
+            "probe_type": probe_type,
+            "intensity": "high" if profile.id == "stress" else "medium",
+        }
+    
+    async def _generate_stress_mode_question_variant(
+        self,
+        original_question: str,
+        question_type: str,
+        difficulty: str,
+    ) -> str:
+        """
+        Generate a more challenging variant of a question for stress mode.
+        
+        Uses API to add:
+        - Time constraints
+        - Edge cases
+        - Multi-part challenges
+        """
+        messages = [
+            {
+                "role": "system",
+                "content": """You are creating a HIGH-PRESSURE interview question.
+
+Take the given question and make it more challenging by:
+1. Adding a time/resource constraint
+2. Adding an edge case or complication
+3. Asking for trade-offs or multiple approaches
+
+Keep it to 2-3 sentences max. Be direct and professional.
+
+Example transformations:
+- "Design a cache" → "Design a distributed cache that handles 1M requests/sec with <10ms latency. You have 5 minutes to outline your approach."
+- "Tell me about teamwork" → "Describe a conflict with a senior colleague where you disagreed on technical direction. What was the outcome and what would you do differently?"
+"""
+            },
+            {
+                "role": "user",
+                "content": f"""Original question: {original_question}
+Type: {question_type}
+Difficulty: {difficulty}
+
+Generate the challenging variant:"""
+            }
+        ]
+        
+        result = await self._ask_groq(messages, max_tokens=150)
+        return result if result else original_question
+    
+    # ===========================================
     # SESSION MANAGEMENT
     # ===========================================
     
@@ -874,6 +1067,36 @@ Examples of BAD acknowledgments (NEVER use):
         
         self.db.add(answer)
         
+        # ===========================================
+        # STRICT/STRESS MODE: Generate Dynamic Follow-up
+        # ===========================================
+        follow_up = None
+        should_follow_up = False
+        profile = self._get_personality_profile(session.interviewer_persona)
+        
+        # Check if this mode should generate follow-ups
+        if profile.id in ["strict", "stress"] and settings.is_groq_configured():
+            # Strict and stress modes get more follow-ups
+            follow_up_chance = 0.7 if profile.id == "stress" else 0.5
+            
+            # Lower relevance = higher follow-up chance
+            if quick_eval.get("relevance", 7) < 6:
+                follow_up_chance = 0.9
+            elif word_count < 30:
+                follow_up_chance = 0.8
+            
+            import random
+            should_follow_up = random.random() < follow_up_chance
+            
+            if should_follow_up:
+                follow_up = await self._generate_pressure_follow_up(
+                    persona=session.interviewer_persona,
+                    question=current_question.get("text", ""),
+                    answer=answer_text,
+                    question_type=current_question.get("type", "general"),
+                    quick_eval=quick_eval,
+                )
+        
         # Generate acknowledgment
         if settings.is_groq_configured():
             acknowledgment = await self._generate_groq_acknowledgment(
@@ -884,6 +1107,10 @@ Examples of BAD acknowledgments (NEVER use):
             )
         else:
             acknowledgment = self._get_acknowledgment(session.interviewer_persona, word_count, session.id)
+        
+        # If there's a follow-up, append it to acknowledgment
+        if follow_up:
+            acknowledgment = f"{acknowledgment} {follow_up['follow_up_text']}"
         
         # Add acknowledgment message
         ack_msg = InterviewMessage(

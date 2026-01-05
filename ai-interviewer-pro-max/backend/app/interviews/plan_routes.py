@@ -431,6 +431,7 @@ async def generate_plan(
             question_count=request.question_count or 10,
             company_mode=request.company_mode,
             round_config=round_config_dict,
+            persona=request.persona,
         )
         
         if plan:

@@ -69,6 +69,8 @@ def init_db() -> None:
     from app.simulation.models import AnswerBehavioralInsight, SessionBehavioralSummary
     from app.reports.models import InterviewReport
     from app.roadmap.models import CareerRoadmap
+    # Admin models
+    from app.admin.models import ErrorLog, APIRequestLog, SystemSettings, BugReport, APIUsage, ThirdPartyIntegration, Broadcast, AIAPILog
     
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created")
@@ -183,6 +185,40 @@ def _run_migrations() -> None:
             
             for col_name, col_def in live_session_columns:
                 add_column_if_missing(conn, "live_interview_sessions", col_name, col_def)
+            
+            # =========================================
+            # API_REQUEST_LOGS TABLE MIGRATIONS
+            # =========================================
+            api_log_columns = [
+                ("user_agent", "TEXT"),
+                ("query_params", "TEXT"),
+            ]
+            
+            for col_name, col_def in api_log_columns:
+                add_column_if_missing(conn, "api_request_logs", col_name, col_def)
+            
+            # =========================================
+            # SYSTEM_SETTINGS TABLE MIGRATIONS
+            # =========================================
+            system_settings_columns = [
+                ("is_sensitive", "BOOLEAN DEFAULT 0"),
+                ("category", "VARCHAR(50) DEFAULT 'general'"),
+                ("value_type", "VARCHAR(20) DEFAULT 'string'"),
+                ("description", "TEXT"),
+            ]
+            
+            for col_name, col_def in system_settings_columns:
+                add_column_if_missing(conn, "system_settings", col_name, col_def)
+            
+            # =========================================
+            # BROADCASTS TABLE MIGRATIONS
+            # =========================================
+            broadcasts_columns = [
+                ("updated_at", "DATETIME"),
+            ]
+            
+            for col_name, col_def in broadcasts_columns:
+                add_column_if_missing(conn, "broadcasts", col_name, col_def)
             
             # =========================================
             # DATA FIXES (Critical for is_used bug)

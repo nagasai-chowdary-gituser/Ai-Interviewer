@@ -3,6 +3,8 @@ Application Configuration
 
 Centralized configuration management using Pydantic Settings.
 Loads from environment variables with sensible defaults for development.
+
+⚠️ SECURITY: For production, ensure all secrets are set via environment variables!
 """
 
 from pydantic_settings import BaseSettings
@@ -10,6 +12,13 @@ from pydantic import Field
 from typing import List
 from functools import lru_cache
 import os
+import secrets
+import warnings
+
+
+# Generate a random default for development only
+# This ensures each dev instance has a unique key, but warns if not explicitly set
+_DEV_SECRET = secrets.token_hex(32)
 
 
 class Settings(BaseSettings):
@@ -18,6 +27,8 @@ class Settings(BaseSettings):
     
     For production, set all required values in .env file.
     For development, sensible defaults are provided.
+    
+    ⚠️ SECURITY WARNING: Never use default values in production!
     """
     
     # ===========================================
@@ -43,8 +54,8 @@ class Settings(BaseSettings):
     # ===========================================
     
     JWT_SECRET_KEY: str = Field(
-        default="dev-secret-key-change-in-production-8k329fn23oi4n2i3n42",
-        description="Secret key for JWT token signing"
+        default=_DEV_SECRET,
+        description="Secret key for JWT token signing. MUST be set in production!"
     )
     JWT_ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
@@ -112,6 +123,36 @@ class Settings(BaseSettings):
     def is_groq_configured(self) -> bool:
         """Check if Groq API is configured."""
         return bool(self.GROQ_API_KEY)
+    
+    def validate_production_settings(self) -> list:
+        """
+        Validate settings for production environment.
+        Returns list of security warnings.
+        """
+        warnings_list = []
+        
+        if self.is_production():
+            # Check for default/weak JWT secret
+            if self.JWT_SECRET_KEY == _DEV_SECRET or len(self.JWT_SECRET_KEY) < 32:
+                warnings_list.append(
+                    "⚠️  CRITICAL: JWT_SECRET_KEY is not set or too weak! "
+                    "Generate a strong key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                )
+            
+            # Check for SQLite in production
+            if "sqlite" in self.DATABASE_URL.lower():
+                warnings_list.append(
+                    "⚠️  WARNING: Using SQLite in production is not recommended. "
+                    "Consider using PostgreSQL."
+                )
+            
+            # Check for debug mode in production
+            if self.DEBUG:
+                warnings_list.append(
+                    "⚠️  WARNING: DEBUG mode is enabled in production!"
+                )
+        
+        return warnings_list
 
 
 @lru_cache()
@@ -121,7 +162,14 @@ def get_settings() -> Settings:
     
     Uses LRU cache to ensure settings are loaded only once.
     """
-    return Settings()
+    settings_instance = Settings()
+    
+    # Log security warnings on startup
+    security_warnings = settings_instance.validate_production_settings()
+    for warning in security_warnings:
+        warnings.warn(warning, RuntimeWarning)
+    
+    return settings_instance
 
 
 # Singleton settings instance for easy imports

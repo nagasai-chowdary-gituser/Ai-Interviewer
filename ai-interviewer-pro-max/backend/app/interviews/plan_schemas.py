@@ -100,6 +100,11 @@ class PlanGenerateRequest(BaseModel):
         None,
         description="Optional per-round question configuration"
     )
+    # NEW: Interviewer persona mode
+    persona: Optional[str] = Field(
+        None,
+        description="Interviewer persona: strict, stress, friendly, neutral. Strict/stress modes generate more challenging questions."
+    )
 
 
 # ===========================================
