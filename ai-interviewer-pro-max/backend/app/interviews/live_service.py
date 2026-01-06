@@ -25,6 +25,9 @@ from app.personalities.modes import get_personality, get_default_personality, Pe
 from app.reports.service import ReportService
 from app.admin.service import AIAPILogService
 
+# TOON (Token-Oriented Object Notation) for 30-60% token savings on LLM calls
+from app.utils.toon_encoder import encode_for_llm, wrap_data_for_prompt, get_toon_instruction, get_toon_stats
+
 
 class LiveInterviewService:
     """
@@ -378,60 +381,88 @@ Do NOT include any evaluation or scoring language."""
                 "role": "system",
                 "content": f"""You are a {profile.name} interviewer providing a brief acknowledgment.
 
-RULES:
-1. ONE sentence only
+CRITICAL RULES:
+1. ONE sentence only - a simple acknowledgment
 2. Reference something SPECIFIC from their answer (a concept, example, or point they made)
 3. Match the personality: {profile.description}
-4. NEVER use these generic phrases:
+4. NEVER ASK ANY QUESTIONS - no follow-ups, no probes, no "what about...", no "how did you..."
+5. NEVER use these phrases:
    - "Tell me more"
-   - "Please elaborate"
+   - "Please elaborate" 
    - "Can you expand"
+   - "What about"
+   - "How did you"
+   - "Could you explain"
    - "That's interesting"
    - "I see"
-   - "Good answer"
-5. Simply acknowledge, then the interview will move to the next question.
-6. The answer quality is: {quality}
+   - Any question at all
+6. Simply acknowledge their answer - the next question will come from a pre-defined list
+7. The answer quality is: {quality}
+8. DO NOT end with a question mark (?)
 
 Examples of GOOD acknowledgments:
 - "Your experience with the migration project sounds valuable."
 - "Noted, the caching approach you mentioned makes sense."
 - "Thank you for explaining your role in that architecture decision."
+- "That's a solid approach to handling scalability."
 
 Examples of BAD acknowledgments (NEVER use):
 - "Interesting, tell me more about that."
 - "Please elaborate on your experience."
-- "Can you expand on that point?"""
+- "Can you expand on that point?"
+- "What was the outcome of that project?"
+- "How did you handle the challenges?"""
             },
             {
                 "role": "user",
-                "content": f"Question asked: {question[:200]}\n\nCandidate's answer: {answer[:600]}\n\nGenerate ONE acknowledgment sentence:"
+                "content": f"[DATA:TOON]\n{encode_for_llm({'q': question[:200], 'a': answer[:600]})}\n[/DATA]\n\nGenerate ONE acknowledgment sentence (NO QUESTIONS):"
             }
         ]
         
         result = await self._ask_groq(messages, max_tokens=60, operation="generate_acknowledgment", session_id=session_id)
         
-        # Filter out any accidental generic phrases
+        # Filter out any accidental questions or generic phrases
         if result:
-            bad_phrases = ["tell me more", "please elaborate", "can you expand", "elaborate on"]
+            bad_phrases = [
+                "tell me more", "please elaborate", "can you expand", "elaborate on",
+                "what about", "how did you", "could you", "would you", "can you tell",
+                "what was", "how was", "why did", "what made", "how would"
+            ]
             result_lower = result.lower()
+            
+            # Check for bad phrases
             for phrase in bad_phrases:
                 if phrase in result_lower:
-                    # Fall back to static acknowledgment if Groq generates garbage
                     return self._get_acknowledgment(persona, word_count, session_id)
+            
+            # Reject any response containing a question mark (asking a question)
+            if "?" in result:
+                return self._get_acknowledgment(persona, word_count, session_id)
+            
             return result
         
         return self._get_acknowledgment(persona, word_count, session_id)
     
     async def _check_answer_relevance(self, question: str, answer: str) -> Dict[str, Any]:
-        """Quick relevance check using Groq."""
+        """Quick relevance check using Groq with TOON-encoded data."""
+        
+        # TOON: Encode the data payload for 30-60% token savings
+        data_payload = {
+            "q": question[:300],  # Shortened key for more savings
+            "a": answer[:500],
+        }
+        toon_data = encode_for_llm(data_payload)
+        
         messages = [
             {
                 "role": "system",
-                "content": "Evaluate if the answer is relevant to the question. Return ONLY a JSON object with: relevance (1-10), complete (true/false), flags (array of issues like 'too_short', 'off_topic', 'unclear')"
+                "content": f"""Evaluate if the answer is relevant to the question.
+{get_toon_instruction()}
+Return ONLY a JSON object with: relevance (1-10), complete (true/false), flags (array of issues like 'too_short', 'off_topic', 'unclear')"""
             },
             {
                 "role": "user",
-                "content": f"Question: {question[:300]}\n\nAnswer: {answer[:500]}\n\nEvaluate:"
+                "content": f"[DATA:TOON]\n{toon_data}\n[/DATA]\n\nEvaluate:"
             }
         ]
         
@@ -1122,36 +1153,12 @@ Generate the challenging variant:"""
         self.db.add(answer)
         
         # ===========================================
-        # STRICT/STRESS MODE: Generate Dynamic Follow-up
+        # ACKNOWLEDGMENT ONLY - NO FOLLOW-UP QUESTIONS
+        # The next question comes from the pre-defined list
+        # This prevents "biased" continuation questions
         # ===========================================
-        follow_up = None
-        should_follow_up = False
-        profile = self._get_personality_profile(session.interviewer_persona)
         
-        # Check if this mode should generate follow-ups
-        if profile.id in ["strict", "stress"] and settings.is_groq_configured():
-            # Strict and stress modes get more follow-ups
-            follow_up_chance = 0.7 if profile.id == "stress" else 0.5
-            
-            # Lower relevance = higher follow-up chance
-            if quick_eval.get("relevance", 7) < 6:
-                follow_up_chance = 0.9
-            elif word_count < 30:
-                follow_up_chance = 0.8
-            
-            import random
-            should_follow_up = random.random() < follow_up_chance
-            
-            if should_follow_up:
-                follow_up = await self._generate_pressure_follow_up(
-                    persona=session.interviewer_persona,
-                    question=current_question.get("text", ""),
-                    answer=answer_text,
-                    question_type=current_question.get("type", "general"),
-                    quick_eval=quick_eval,
-                )
-        
-        # Generate acknowledgment
+        # Generate acknowledgment (summarizes user's answer only)
         if settings.is_groq_configured():
             acknowledgment = await self._generate_groq_acknowledgment(
                 session.interviewer_persona,
@@ -1161,10 +1168,6 @@ Generate the challenging variant:"""
             )
         else:
             acknowledgment = self._get_acknowledgment(session.interviewer_persona, word_count, session.id)
-        
-        # If there's a follow-up, append it to acknowledgment
-        if follow_up:
-            acknowledgment = f"{acknowledgment} {follow_up['follow_up_text']}"
         
         # Add acknowledgment message
         ack_msg = InterviewMessage(

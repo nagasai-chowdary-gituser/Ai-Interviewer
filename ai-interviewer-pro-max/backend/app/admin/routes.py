@@ -1502,3 +1502,60 @@ async def toggle_broadcast(
         "message": f"Broadcast {'activated' if broadcast.is_active else 'deactivated'}",
         "broadcast": broadcast.to_dict()
     }
+
+
+# ===========================================
+# TOON (Token-Oriented Object Notation) STATUS
+# ===========================================
+
+@router.get(
+    "/toon-status",
+    summary="Get TOON encoding status",
+    description="Get TOON format status and token savings statistics."
+)
+async def get_toon_status(
+    current_admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Get TOON encoding status and statistics."""
+    from app.utils.toon_encoder import check_toon_status, get_toon_stats
+    
+    status = check_toon_status()
+    stats = get_toon_stats()
+    
+    return {
+        "success": True,
+        "toon": {
+            "available": status["available"],
+            "version": status["version"],
+            "message": status["message"],
+            "stats": {
+                "encoding_calls": stats["calls"],
+                "json_characters_original": stats["json_chars"],
+                "toon_characters_encoded": stats["toon_chars"],
+                "savings_percent": stats["savings_percent"],
+                "tokens_saved_estimate": int((stats["json_chars"] - stats["toon_chars"]) / 4)  # ~4 chars per token
+            }
+        }
+    }
+
+
+@router.post(
+    "/toon-status/reset",
+    summary="Reset TOON statistics",
+    description="Reset TOON encoding statistics counters."
+)
+async def reset_toon_stats_endpoint(
+    current_admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Reset TOON statistics."""
+    from app.utils.toon_encoder import reset_toon_stats
+    
+    reset_toon_stats()
+    
+    return {
+        "success": True,
+        "message": "TOON statistics reset"
+    }
+

@@ -65,7 +65,7 @@ function LiveInterview() {
     // ===========================================
     // BROWSER FULLSCREEN API (EXAM-GRADE)
     // ===========================================
-    
+
     // Enter TRUE browser fullscreen (hides Chrome URL bar, tabs, etc.)
     const enterBrowserFullscreen = useCallback(() => {
         const elem = document.documentElement;
@@ -109,7 +109,7 @@ function LiveInterview() {
             setIsBrowserFullscreen(isInFullscreen);
             // Also sync CSS fullscreen state
             setIsFullscreen(isInFullscreen);
-            
+
             // CRITICAL: Trigger resize event to fix canvas/camera after fullscreen change
             // This ensures eye contact and avatar rendering updates properly
             setTimeout(() => {
@@ -1039,23 +1039,37 @@ function LiveInterview() {
     }, [persona, status, isCameraReady, recordingSupported, isRecording, startRecording]);
 
     // ===========================================
-    // CLEANUP ON UNMOUNT
+    // CLEANUP ON UNMOUNT (ONLY ON UNMOUNT - empty deps array)
     // ===========================================
     useEffect(() => {
         return () => {
-            stopAllMedia();
-            stopSpeaking();
+            // This cleanup only runs when component unmounts
+            console.log('[Cleanup] Component unmounting - cleaning up...');
+
+            // Stop all media
+            if (typeof stopAllMedia === 'function') stopAllMedia();
+            if (typeof stopSpeaking === 'function') stopSpeaking();
+
             // Cleanup webcam/camera when component unmounts
             resetEyeContactState();
+
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
             }
-            // Stop analytics recording
-            if (isAnalyticsEnabled) {
-                stopVideoRecording();
+
+            // Exit browser fullscreen on unmount
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => { });
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
             }
         };
-    }, [stopAllMedia, stopSpeaking, isAnalyticsEnabled, stopVideoRecording]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty array = only run on mount/unmount
 
     // ===========================================
     // VOICE RECORDING TOGGLE
@@ -1211,60 +1225,63 @@ function LiveInterview() {
 
                 // Handle interview completion or next question
                 if (response.is_complete) {
-                    // CRITICAL FIX: Speak the acknowledgment for the LAST ANSWER first
-                    // This ensures no summary is skipped
-                    await speakInterviewerMessage(response.acknowledgment, false);
+                    console.log('[Interview] Complete! Processing final response...');
 
-                    // Small delay to let the acknowledgment be heard
-                    await new Promise(resolve => setTimeout(resolve, 800));
-
-                    // ===========================================
-                    // ANALYTICS: Generate and show performance summary
-                    // ===========================================
-                    if (isAnalyticsEnabled) {
-                        console.log('[Analytics] Interview complete, generating summary...');
-                        stopVideoRecording();
-
-                        // Small delay to ensure video is processed
-                        setTimeout(() => {
-                            const summaryData = generateSummary();
-                            setPerformanceSummaryData(summaryData);
-                            setShowPerformanceSummary(true);
-                            console.log('[Analytics] Performance summary ready');
-                        }, 500);
-                    }
-
-                    // CRITICAL FIX: Stop camera and all media when interview completes
-                    console.log('[Cleanup] Interview completed - stopping all media...');
-                    stopFaceTracking();
-                    stopAllMedia();
-                    resetEyeContactState();
-
-                    // Stop the main interview recording
-                    if (isRecording) {
-                        stopRecording();
-                    }
-
-                    setStatus('completed');  // FIXED: Match backend status
+                    // STREAMLINED: Process completion quickly without blocking waits
+                    // Update UI state immediately for responsiveness
+                    setStatus('completed');
                     setCurrentQuestion(null);
-                    setInterviewPhase('INTERVIEW_COMPLETED'); // Update state machine
+                    setInterviewPhase('INTERVIEW_COMPLETED');
+
+                    // Add completion message
+                    const completeMessage = {
+                        id: `complete-${Date.now()}`,
+                        role: 'interviewer',
+                        content: response.acknowledgment || "Thank you for your time. That concludes our interview. Your results will be ready shortly.",
+                        message_type: 'transition',
+                        created_at: new Date().toISOString(),
+                    };
+                    setMessages(prev => [...prev, completeMessage]);
+
+                    // Speak the final message (non-blocking)
+                    const finalMessage = response.acknowledgment
+                        ? response.acknowledgment + " That concludes our interview."
+                        : "Thank you for your time. That concludes our interview.";
+                    speakInterviewerMessage(finalMessage, false);
 
                     // CRITICAL: Persist interview completion to localStorage
-                    // This ensures data is not lost on refresh
                     markSessionCompleted(sessionId, {
                         targetRole: targetRole,
                         date: new Date().toISOString(),
                     });
 
-                    const completeMessage = {
-                        id: `complete-${Date.now()}`,
-                        role: 'interviewer',
-                        content: "Thank you for your time. That concludes our interview. Your results will be ready shortly.",
-                        message_type: 'transition',
-                        created_at: new Date().toISOString(),
-                    };
-                    setMessages(prev => [...prev, completeMessage]);
-                    speakInterviewerMessage("Thank you for your time. That concludes our interview.", false);
+                    // Cleanup media and exit fullscreen (non-blocking)
+                    setTimeout(() => {
+                        console.log('[Cleanup] Interview completed - stopping all media...');
+                        stopFaceTracking();
+                        stopAllMedia();
+                        resetEyeContactState();
+
+                        // Exit browser fullscreen when interview completes
+                        exitBrowserFullscreen();
+
+                        // Stop the main interview recording
+                        if (isRecording) {
+                            stopRecording();
+                        }
+
+                        // Analytics: Generate and show performance summary
+                        if (isAnalyticsEnabled) {
+                            console.log('[Analytics] Interview complete, generating summary...');
+                            stopVideoRecording();
+
+                            setTimeout(() => {
+                                const summaryData = generateSummary();
+                                setPerformanceSummaryData(summaryData);
+                                setShowPerformanceSummary(true);
+                            }, 300);
+                        }
+                    }, 500); // Small delay to let TTS start
                 } else if (response.next_question) {
                     // Speak acknowledgment first, then next question
                     await speakInterviewerMessage(response.acknowledgment);
@@ -1408,6 +1425,9 @@ function LiveInterview() {
             // Cleanup webcam/camera state
             resetEyeContactState();
 
+            // CRITICAL FIX: Exit browser fullscreen when ending interview early
+            exitBrowserFullscreen();
+
             // Stop recording and wait for blob - CRITICAL: await the promise
             let finalBlob = recordingBlob;
             if (isRecording) {
@@ -1466,6 +1486,9 @@ function LiveInterview() {
 
         // Cleanup webcam/camera state
         resetEyeContactState();
+
+        // CRITICAL FIX: Exit browser fullscreen when viewing results
+        exitBrowserFullscreen();
 
         // Stop and save recording from main recorder - CRITICAL: await the promise
         let finalBlob = recordingBlob;
@@ -1803,8 +1826,8 @@ function LiveInterview() {
                                             <Volume2 size={18} />
                                         </button>
                                     )}
-                                    <button 
-                                        className="header-icon-btn" 
+                                    <button
+                                        className="header-icon-btn"
                                         title={isBrowserFullscreen ? "Exit Fullscreen (ESC)" : "Enter Browser Fullscreen"}
                                         onClick={toggleBrowserFullscreen}
                                     >
@@ -1859,8 +1882,8 @@ function LiveInterview() {
                         {/* Recording Indicator (Strict/High-Pressure Modes) */}
                         {isRecording && (persona === 'strict' || persona === 'stress') && (
                             <div className="recording-indicator-container">
-                                <RecordingIndicator 
-                                    isRecording={isRecording} 
+                                <RecordingIndicator
+                                    isRecording={isRecording}
                                     duration={recordingDuration}
                                 />
                                 <span className="recording-note">Your interview is being recorded</span>

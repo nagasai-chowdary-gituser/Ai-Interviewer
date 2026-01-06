@@ -27,7 +27,7 @@ body.interview-fullscreen-active {
     padding: 0 !important;
 }
 
-body.interview-fullscreen-active > #root {
+body.interview-fullscreen-active>#root {
     overflow: hidden !important;
     position: fixed !important;
     width: 100vw !important;
@@ -37,7 +37,7 @@ body.interview-fullscreen-active > #root {
 }
 
 /* Hide ALL siblings when interview is active */
-body.interview-fullscreen-active > #root > *:not(.live-interview-container) {
+body.interview-fullscreen-active>#root>*:not(.live-interview-container) {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -264,7 +264,7 @@ div.live-interview-container::after {
     filter: none !important;
 }
 
-.fullscreen-controls-bar > * {
+.fullscreen-controls-bar>* {
     pointer-events: auto;
 }
 
@@ -273,7 +273,9 @@ div.live-interview-container::after {
     opacity: 1;
 }
 
-.fc-left, .fc-center, .fc-right {
+.fc-left,
+.fc-center,
+.fc-right {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -493,7 +495,7 @@ div.avatar-panel,
     backdrop-filter: none !important;
 }
 
-.avatar-panel-header > * {
+.avatar-panel-header>* {
     pointer-events: auto;
 }
 
@@ -649,7 +651,7 @@ div.avatar-panel,
     object-fit: contain;
 }
 
-.avatar-canvas-layer > div {
+.avatar-canvas-layer>div {
     width: 100% !important;
     height: 100% !important;
     position: absolute !important;
@@ -1166,62 +1168,160 @@ div.chat-panel,
 }
 
 /* ===========================================
-   FEEDBACK TOAST - NEVER SHRINK
+   FEEDBACK TOAST - FIXED POSITION OVERLAY
+   Fixed positioning ensures it won't be clipped by overflow:hidden
    =========================================== */
 
 .feedback-toast {
-    padding: 12px 16px;
-    border-radius: 10px;
-    margin: 0 20px 12px;
+    position: fixed !important;
+    bottom: 180px;
+    right: 20px;
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    padding: 16px 20px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     background: var(--bg-surface);
-    flex: 0 0 auto !important;
-    flex-shrink: 0 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15),
+        0 4px 16px rgba(0, 0, 0, 0.1);
+    z-index: 9999 !important;
+    animation: slideInFeedback 0.3s ease-out;
+    backdrop-filter: blur(12px);
+}
+
+@keyframes slideInFeedback {
+    from {
+        opacity: 0;
+        transform: translateX(20px) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+    }
 }
 
 .feedback-toast.good {
     background: var(--success-bg);
     border-color: var(--success-border);
+    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.2),
+        0 4px 16px rgba(34, 197, 94, 0.1);
 }
 
 .feedback-toast.ok {
-    background: rgba(245, 158, 11, 0.1);
-    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.2),
+        0 4px 16px rgba(245, 158, 11, 0.1);
 }
 
 .feedback-toast.needs-work {
     background: var(--error-bg);
     border-color: var(--error-border);
+    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.2),
+        0 4px 16px rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .feedback-toast {
+    background: rgba(31, 41, 55, 0.95);
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+        0 4px 16px rgba(139, 92, 246, 0.15);
+}
+
+[data-theme="dark"] .feedback-toast.good {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+[data-theme="dark"] .feedback-toast.ok {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+[data-theme="dark"] .feedback-toast.needs-work {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
 }
 
 .feedback-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.feedback-header svg {
+    flex-shrink: 0;
 }
 
 .feedback-header button {
     margin-left: auto;
     background: none;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     cursor: pointer;
     color: var(--text-muted);
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    line-height: 1;
+    padding: 4px;
+}
+
+.feedback-header button:hover {
+    opacity: 1;
 }
 
 .feedback-toast p {
     margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.4;
+    font-size: 0.9rem;
+    line-height: 1.5;
     color: var(--text-primary);
 }
 
 .feedback-score {
-    margin-top: 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    font-weight: 700;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.feedback-toast.good .feedback-score {
+    color: var(--success);
+}
+
+.feedback-toast.ok .feedback-score {
+    color: #f59e0b;
+}
+
+.feedback-toast.needs-work .feedback-score {
+    color: var(--error);
+}
+
+/* Mobile adjustments for feedback toast */
+@media (max-width: 768px) {
+    .feedback-toast {
+        bottom: 220px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
+    }
+}
+
+/* Fullscreen mode - ensure toast is visible */
+:fullscreen .feedback-toast,
+:-webkit-full-screen .feedback-toast,
+:-ms-fullscreen .feedback-toast {
+    position: fixed !important;
+    z-index: 99999 !important;
 }
 
 /* ===========================================
@@ -1295,13 +1395,14 @@ div.chat-panel,
 
 /* Large desktop - maximum horizontal spread */
 @media (min-width: 1440px) {
+
     .avatar-panel,
     .fullscreen-mode .avatar-panel {
         flex: 1 1 70% !important;
         width: 70% !important;
         max-width: 70% !important;
     }
-    
+
     .chat-panel,
     .fullscreen-mode .chat-panel {
         flex: 1 1 30% !important;
@@ -1312,13 +1413,14 @@ div.chat-panel,
 
 /* Tablet landscape */
 @media (max-width: 1024px) {
+
     .interview-content,
     .fullscreen-mode .interview-content,
     .windowed-mode .interview-content {
         flex-direction: row !important;
         width: 100vw !important;
     }
-    
+
     .avatar-panel,
     .fullscreen-mode .avatar-panel,
     .windowed-mode .avatar-panel {
@@ -1327,7 +1429,7 @@ div.chat-panel,
         min-width: 50% !important;
         max-width: 65% !important;
     }
-    
+
     .chat-panel,
     .fullscreen-mode .chat-panel,
     .windowed-mode .chat-panel {
@@ -1340,13 +1442,14 @@ div.chat-panel,
 
 /* Mobile/tablet portrait - stack vertically */
 @media (max-width: 768px) {
+
     .interview-content,
     .fullscreen-mode .interview-content,
     .windowed-mode .interview-content {
         flex-direction: column !important;
         width: 100vw !important;
     }
-    
+
     .avatar-panel,
     .fullscreen-mode .avatar-panel,
     .windowed-mode .avatar-panel {
@@ -1358,7 +1461,7 @@ div.chat-panel,
         border-right: none !important;
         border-bottom: 1px solid var(--border-color) !important;
     }
-    
+
     .chat-panel,
     .fullscreen-mode .chat-panel,
     .windowed-mode .chat-panel {
@@ -1383,7 +1486,7 @@ div.chat-panel,
         bottom: 0;
         padding: 12px 0;
     }
-    
+
     /* Fullscreen controls on mobile */
     .fullscreen-controls-bar {
         top: auto !important;
@@ -1394,6 +1497,7 @@ div.chat-panel,
 
 /* Small mobile */
 @media (max-width: 480px) {
+
     .avatar-panel,
     .fullscreen-mode .avatar-panel,
     .windowed-mode .avatar-panel {
@@ -1401,7 +1505,7 @@ div.chat-panel,
         height: 45vh !important;
         width: 100vw !important;
     }
-    
+
     .chat-panel,
     .fullscreen-mode .chat-panel,
     .windowed-mode .chat-panel {
@@ -1772,7 +1876,7 @@ div.chat-panel,
     .chat-panel {
         flex: 0 0 45% !important;
     }
-    
+
     .avatar-panel {
         flex: 1 1 55% !important;
     }
@@ -1782,28 +1886,28 @@ div.chat-panel,
     .interview-content {
         flex-direction: column !important;
     }
-    
+
     .avatar-panel {
         flex: 0 0 45% !important;
         height: 45% !important;
         border-right: none !important;
         border-bottom: 1px solid #e2e8f0 !important;
     }
-    
+
     [data-theme="dark"] .avatar-panel {
         border-bottom-color: rgba(139, 92, 246, 0.2) !important;
     }
-    
+
     .chat-panel {
         flex: 1 1 55% !important;
         height: 55% !important;
         border-left: none !important;
     }
-    
+
     .avatar-panel-header {
         padding: 8px 12px;
     }
-    
+
     .avatar-panel-header .header-center {
         display: none;
     }
@@ -1816,37 +1920,39 @@ div.chat-panel,
         max-height: 48px !important;
         padding: 0 12px !important;
     }
-    
+
     .interview-main {
         height: calc(100vh - 48px) !important;
         height: calc(100dvh - 48px) !important;
     }
-    
+
     .avatar-panel {
         flex: 0 0 40% !important;
         height: 40% !important;
     }
-    
+
     .chat-panel {
         flex: 1 1 60% !important;
         height: 60% !important;
     }
-    
+
     .chat-input-area {
         padding: 12px 16px;
     }
-    
+
     .input-container {
         padding: 10px 14px;
     }
-    
+
     .media-btn {
         width: 42px;
         height: 42px;
     }
-    
+
     .chat-messages {
-        padding: 16px;}
+        padding: 16px;
+    }
+}
 
 /* ===========================================
    COMPLETING CARD - Interview Complete State
@@ -1857,24 +1963,25 @@ div.chat-panel,
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 40px 24px;
+    padding: 48px 24px;
     text-align: center;
-    flex: 1;
-    min-height: 0;
+    background: var(--bg-surface);
+    border-radius: 16px;
+    margin: 20px;
+    border: 1px solid var(--border-color);
 }
 
 .completing-card h3 {
     font-size: 1.5rem;
     font-weight: 700;
+    margin: 20px 0 8px;
     color: var(--text-primary);
-    margin: 0;
 }
 
 .completing-card p {
     font-size: 1rem;
     color: var(--text-secondary);
-    margin: 0;
+    margin: 0 0 24px;
 }
 
 .completing-card svg {
