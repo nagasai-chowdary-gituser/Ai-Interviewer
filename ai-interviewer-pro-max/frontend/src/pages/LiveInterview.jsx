@@ -1044,29 +1044,51 @@ function LiveInterview() {
     useEffect(() => {
         return () => {
             // This cleanup only runs when component unmounts
-            console.log('[Cleanup] Component unmounting - cleaning up...');
+            console.log('[Cleanup] Component unmounting - cleaning up everything...');
 
-            // Stop all media
-            if (typeof stopAllMedia === 'function') stopAllMedia();
-            if (typeof stopSpeaking === 'function') stopSpeaking();
-
-            // Cleanup webcam/camera when component unmounts
-            resetEyeContactState();
-
+            // Clear any timers first
             if (silenceTimerRef.current) {
                 clearTimeout(silenceTimerRef.current);
             }
 
-            // Exit browser fullscreen on unmount
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => { });
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
+            // STEP 1: Exit fullscreen FIRST
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => {});
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
                 }
+            } catch (e) {
+                console.warn('[Cleanup] Fullscreen exit error:', e);
             }
+
+            // STEP 2: Stop speech services
+            try {
+                if (typeof stopSpeaking === 'function') stopSpeaking();
+                if (typeof stopListening === 'function') stopListening();
+            } catch (e) {
+                console.warn('[Cleanup] Speech services error:', e);
+            }
+
+            // STEP 3: Stop avatar eye contact webcam (separate stream)
+            try {
+                resetEyeContactState();
+            } catch (e) {
+                console.warn('[Cleanup] Eye contact cleanup error:', e);
+            }
+
+            // STEP 4: Stop all media streams
+            try {
+                if (typeof stopAllMedia === 'function') stopAllMedia();
+            } catch (e) {
+                console.warn('[Cleanup] Media cleanup error:', e);
+            }
+
+            console.log('[Cleanup] ✓ Component unmount cleanup complete');
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty array = only run on mount/unmount
@@ -1206,8 +1228,14 @@ function LiveInterview() {
                     }
                 }
 
-                // Background evaluation (non-blocking)
+                // Show feedback popup IMMEDIATELY with loading state for responsiveness
+                // This gives instant feedback to user while evaluation runs in background
                 if (currentQuestion) {
+                    // Show loading state immediately
+                    setLastFeedback({ loading: true, feedback: 'Evaluating your answer...' });
+                    setShowFeedback(true);
+                    
+                    // Run evaluation in background
                     evaluationApi.quick(
                         sessionId,
                         currentQuestion.id,
@@ -1216,11 +1244,18 @@ function LiveInterview() {
                         currentQuestion.type
                     ).then(evalResponse => {
                         if (evalResponse.success && evalResponse.result) {
+                            // Update with real results
                             setLastFeedback(evalResponse.result);
-                            setShowFeedback(true);
+                            // Keep showing for 5 more seconds after results arrive
                             setTimeout(() => setShowFeedback(false), 5000);
+                        } else {
+                            // Hide on failure
+                            setShowFeedback(false);
                         }
-                    }).catch(console.warn);
+                    }).catch(() => {
+                        // Hide popup on error
+                        setShowFeedback(false);
+                    });
                 }
 
                 // Handle interview completion or next question
@@ -1255,33 +1290,87 @@ function LiveInterview() {
                         date: new Date().toISOString(),
                     });
 
-                    // Cleanup media and exit fullscreen (non-blocking)
-                    setTimeout(() => {
-                        console.log('[Cleanup] Interview completed - stopping all media...');
-                        stopFaceTracking();
-                        stopAllMedia();
+                    // ===========================================
+                    // INTERVIEW COMPLETE - CLEANUP SEQUENCE
+                    // Order matters! Exit fullscreen FIRST, then stop cameras
+                    // ===========================================
+                    console.log('[Cleanup] Interview completed - starting cleanup sequence...');
+                    
+                    // STEP 1: Exit fullscreen FIRST (before stopping cameras)
+                    // Some browsers have issues with camera cleanup while in fullscreen
+                    try {
+                        if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                            console.log('[Cleanup] Step 1: Exiting fullscreen...');
+                            if (document.exitFullscreen) {
+                                await document.exitFullscreen().catch(() => {});
+                            } else if (document.webkitExitFullscreen) {
+                                document.webkitExitFullscreen();
+                            } else if (document.msExitFullscreen) {
+                                document.msExitFullscreen();
+                            }
+                            // Wait for fullscreen exit
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                    } catch (e) {
+                        console.warn('[Cleanup] Fullscreen exit error:', e);
+                    }
+                    
+                    // STEP 2: Stop listening/speaking
+                    console.log('[Cleanup] Step 2: Stopping speech services...');
+                    try {
+                        if (isListening) stopListening();
+                        stopSpeaking();
+                    } catch (e) {
+                        console.warn('[Cleanup] Speech services stop error:', e);
+                    }
+                    
+                    // STEP 3: Stop avatar's webcam FIRST (eye contact uses separate MediaPipe stream)
+                    console.log('[Cleanup] Step 3: Stopping avatar eye contact webcam...');
+                    try {
                         resetEyeContactState();
-
-                        // Exit browser fullscreen when interview completes
-                        exitBrowserFullscreen();
-
-                        // Stop the main interview recording
+                    } catch (e) {
+                        console.warn('[Cleanup] Eye contact cleanup error:', e);
+                    }
+                    
+                    // STEP 4: Stop face tracking
+                    console.log('[Cleanup] Step 4: Stopping face tracking...');
+                    try {
+                        stopFaceTracking();
+                    } catch (e) {
+                        console.warn('[Cleanup] Face tracking stop error:', e);
+                    }
+                    
+                    // STEP 5: Stop all media streams (main camera/mic)
+                    console.log('[Cleanup] Step 5: Stopping all media streams...');
+                    try {
+                        stopAllMedia();
+                    } catch (e) {
+                        console.warn('[Cleanup] Media streams stop error:', e);
+                    }
+                    
+                    // STEP 6: Stop interview recording
+                    console.log('[Cleanup] Step 6: Stopping recording...');
+                    try {
                         if (isRecording) {
                             stopRecording();
                         }
+                    } catch (e) {
+                        console.warn('[Cleanup] Recording stop error:', e);
+                    }
+                    
+                    console.log('[Cleanup] ✓ ALL cleanup complete - camera light should be OFF');
 
-                        // Analytics: Generate and show performance summary
-                        if (isAnalyticsEnabled) {
-                            console.log('[Analytics] Interview complete, generating summary...');
-                            stopVideoRecording();
+                    // Analytics: Generate and show performance summary (after cleanup)
+                    if (isAnalyticsEnabled) {
+                        console.log('[Analytics] Interview complete, generating summary...');
+                        stopVideoRecording();
 
-                            setTimeout(() => {
-                                const summaryData = generateSummary();
-                                setPerformanceSummaryData(summaryData);
-                                setShowPerformanceSummary(true);
-                            }, 300);
-                        }
-                    }, 500); // Small delay to let TTS start
+                        setTimeout(() => {
+                            const summaryData = generateSummary();
+                            setPerformanceSummaryData(summaryData);
+                            setShowPerformanceSummary(true);
+                        }, 300);
+                    }
                 } else if (response.next_question) {
                     // Speak acknowledgment first, then next question
                     await speakInterviewerMessage(response.acknowledgment);
@@ -1525,7 +1614,7 @@ function LiveInterview() {
             }
         }
 
-        navigate(`/report/${sessionId}`);
+        navigate(`/report/${sessionId}`, { state: { personality: persona } });
     };
 
     // ===========================================
@@ -1925,25 +2014,32 @@ function LiveInterview() {
 
                         {/* Quick Feedback Toast */}
                         {showFeedback && lastFeedback && (
-                            <div className={`feedback-toast ${lastFeedback.relevance_score >= 6 ? 'good' :
+                            <div className={`feedback-toast ${
+                                lastFeedback.loading ? 'loading' :
+                                lastFeedback.relevance_score >= 6 ? 'good' :
                                 lastFeedback.relevance_score >= 4 ? 'ok' : 'needs-work'
                                 }`}>
                                 <div className="feedback-header">
-                                    {lastFeedback.relevance_score >= 6 ? (
+                                    {lastFeedback.loading ? (
+                                        <Loader2 size={16} className="spinning" />
+                                    ) : lastFeedback.relevance_score >= 6 ? (
                                         <CheckCircle size={16} />
                                     ) : (
                                         <AlertCircle size={16} />
                                     )}
                                     <span>
-                                        {lastFeedback.relevance_score >= 6 ? 'Good Answer' :
+                                        {lastFeedback.loading ? 'Evaluating...' :
+                                            lastFeedback.relevance_score >= 6 ? 'Good Answer' :
                                             lastFeedback.relevance_score >= 4 ? 'Adequate' : 'Needs Improvement'}
                                     </span>
                                     <button onClick={() => setShowFeedback(false)}>×</button>
                                 </div>
                                 <p>{lastFeedback.feedback}</p>
-                                <div className="feedback-score">
-                                    Score: {lastFeedback.relevance_score}/10
-                                </div>
+                                {!lastFeedback.loading && (
+                                    <div className="feedback-score">
+                                        Score: {lastFeedback.relevance_score}/10
+                                    </div>
+                                )}
                             </div>
                         )}
 

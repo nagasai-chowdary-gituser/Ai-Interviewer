@@ -1222,6 +1222,33 @@ div.chat-panel,
         0 4px 16px rgba(239, 68, 68, 0.1);
 }
 
+/* Loading state for feedback toast */
+.feedback-toast.loading {
+    background: var(--bg-surface);
+    border-color: var(--primary-color, #8b5cf6);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2),
+        0 4px 16px rgba(139, 92, 246, 0.1);
+}
+
+.feedback-toast.loading .feedback-header {
+    color: var(--primary-color, #8b5cf6);
+}
+
+/* Spinning animation for loader */
+.feedback-toast .spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+[data-theme="dark"] .feedback-toast.loading {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
 [data-theme="dark"] .feedback-toast {
     background: rgba(31, 41, 55, 0.95);
     border-color: rgba(139, 92, 246, 0.3);

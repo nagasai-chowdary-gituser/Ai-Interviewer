@@ -32,28 +32,28 @@ const AVATAR_CONFIG = {
     eyeContact: {
         enabled: true,
         useWebcam: true,         // Enable webcam-based face tracking
-        smoothing: 0.08,         // Smooth transitions (slightly slower for webcam)
+        smoothing: 0.12,         // Slightly faster for more responsive feel
 
         // HEAD MOVEMENT SENSITIVITY - How much avatar head moves based on face position
         // Face position is normalized to -1 to 1 range
-        webcamYawSensitivity: 0.30,   // Horizontal: how much yaw for full face displacement
-        webcamPitchSensitivity: 0.20, // Vertical: how much pitch for full face displacement
+        webcamYawSensitivity: 0.35,   // Horizontal: how much yaw for full face displacement
+        webcamPitchSensitivity: 0.25, // Vertical: how much pitch for full face displacement
 
         // MICRO-MOVEMENTS - Small natural movements when face is stable
-        microMovementAmount: 0.02,    // Small idle movements
-        microMovementSpeed: 0.5,      // Speed of micro-movements
+        microMovementAmount: 0.03,    // Small idle movements
+        microMovementSpeed: 0.6,      // Speed of micro-movements
 
-        // FALLBACK ANIMATION - When webcam not available
-        primaryYaw: 0.12,        // Main horizontal movement (~7 degrees)
-        primaryPitch: 0.08,      // Main vertical movement (~4.5 degrees)
-        secondaryYaw: 0.06,      // Secondary horizontal layer
-        secondaryPitch: 0.04,    // Secondary vertical layer
-        primarySpeed: 0.4,       // Slow, breathing-like base rhythm
-        secondarySpeed: 0.7,     // Slightly faster secondary rhythm
+        // FALLBACK ANIMATION - When webcam not available (INCREASED for visibility)
+        primaryYaw: 0.20,        // Main horizontal movement (~12 degrees) - DOUBLED
+        primaryPitch: 0.14,      // Main vertical movement (~8 degrees) - DOUBLED
+        secondaryYaw: 0.10,      // Secondary horizontal layer
+        secondaryPitch: 0.07,    // Secondary vertical layer
+        primarySpeed: 0.5,       // Slow, breathing-like base rhythm
+        secondarySpeed: 0.8,     // Slightly faster secondary rhythm
 
         // LIMITS - Maximum rotation allowed (safety clamp)
-        maxYaw: 0.40,            // Max ±23 degrees horizontal
-        maxPitch: 0.30,          // Max ±17 degrees vertical
+        maxYaw: 0.50,            // Max ±29 degrees horizontal
+        maxPitch: 0.40,          // Max ±23 degrees vertical
     },
 
     lipSync: {
@@ -141,6 +141,9 @@ const eyeContactState = {
     camera: null,               // MediaPipe Camera instance
     lastFaceTime: 0,            // Last time a face was detected
     debugMode: true,            // Log debug info
+    fallbackActive: true,       // ALWAYS start with fallback active until webcam is confirmed
+    initAttempts: 0,            // Track initialization attempts
+    isProcessingFrame: false,   // Prevent overlapping frame processing
 };
 
 // MediaPipe FaceMesh loader function (dynamic import to avoid blocking)
@@ -204,12 +207,25 @@ const onFaceResults = (results) => {
 
 // Initialize webcam-based eye contact tracking
 const initializeEyeContact = async () => {
-    if (eyeContactState.initialized) return;
+    // Prevent multiple simultaneous initialization attempts
+    if (eyeContactState.initAttempts > 3) {
+        console.log('[EyeContact] Max init attempts reached, using fallback');
+        eyeContactState.fallbackActive = true;
+        eyeContactState.initialized = true;
+        return;
+    }
 
-    eyeContactState.initialized = true;
+    eyeContactState.initAttempts++;
     eyeContactState.time = 0;
 
-    console.log('[EyeContact] ✓ Initializing WEBCAM-based eye contact tracking...');
+    // CRITICAL: Always activate fallback first - it will be switched off if webcam succeeds
+    // This ensures smooth animation from the very first frame
+    eyeContactState.fallbackActive = true;
+    eyeContactState.initialized = true;
+    eyeContactState.faceDetected = false;
+
+    console.log('[EyeContact] ✓ Initializing eye contact system (attempt', eyeContactState.initAttempts, ')...');
+    console.log('[EyeContact] ✓ FALLBACK ANIMATION ACTIVE immediately for smooth experience');
 
     // Check if webcam is enabled in config
     if (!AVATAR_CONFIG.eyeContact.useWebcam) {
@@ -218,10 +234,15 @@ const initializeEyeContact = async () => {
     }
 
     try {
-        // Load MediaPipe modules dynamically
-        const modules = await loadMediaPipeModules();
+        // Load MediaPipe modules dynamically with timeout
+        const loadTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('MediaPipe load timeout')), 8000)
+        );
+
+        const modules = await Promise.race([loadMediaPipeModules(), loadTimeout]);
         if (!modules) {
             console.warn('[EyeContact] MediaPipe modules not available, using fallback animation');
+            eyeContactState.fallbackActive = true;
             return;
         }
 
@@ -232,13 +253,15 @@ const initializeEyeContact = async () => {
         const videoElement = document.createElement('video');
         videoElement.setAttribute('playsinline', '');
         videoElement.setAttribute('autoplay', '');
+        videoElement.setAttribute('muted', '');
+        videoElement.muted = true;
         videoElement.style.display = 'none';
         videoElement.style.width = '320px';
         videoElement.style.height = '240px';
         document.body.appendChild(videoElement);
         eyeContactState.videoElement = videoElement;
 
-        // Initialize FaceMesh
+        // Initialize FaceMesh with error handling
         const faceMesh = new FaceMesh({
             locateFile: (file) => {
                 return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
@@ -247,7 +270,7 @@ const initializeEyeContact = async () => {
 
         faceMesh.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: false,  // We only need basic face position, not detailed landmarks
+            refineLandmarks: false,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
@@ -255,11 +278,18 @@ const initializeEyeContact = async () => {
         faceMesh.onResults(onFaceResults);
         eyeContactState.faceMesh = faceMesh;
 
-        // Initialize Camera
+        // Initialize Camera with frame processing
         const camera = new Camera(videoElement, {
             onFrame: async () => {
-                if (eyeContactState.faceMesh && eyeContactState.webcamActive) {
-                    await eyeContactState.faceMesh.send({ image: videoElement });
+                if (eyeContactState.faceMesh && eyeContactState.webcamActive && !eyeContactState.isProcessingFrame) {
+                    eyeContactState.isProcessingFrame = true;
+                    try {
+                        await eyeContactState.faceMesh.send({ image: videoElement });
+                    } catch (e) {
+                        // Silent error - don't spam console
+                    } finally {
+                        eyeContactState.isProcessingFrame = false;
+                    }
                 }
             },
             width: 320,
@@ -268,47 +298,93 @@ const initializeEyeContact = async () => {
 
         eyeContactState.camera = camera;
 
-        // Start the camera
-        await camera.start();
+        // Start the camera with timeout
+        const cameraTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Camera start timeout')), 5000)
+        );
+
+        await Promise.race([camera.start(), cameraTimeout]);
+        
+        // Give it a moment to start processing frames
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         eyeContactState.webcamActive = true;
+        eyeContactState.fallbackActive = false; // Webcam is working, disable fallback
 
         console.log('[EyeContact] ✓ WEBCAM face tracking ACTIVE! Avatar will follow your face position.');
 
     } catch (error) {
-        console.error('[EyeContact] Failed to initialize webcam tracking:', error);
-        console.log('[EyeContact] Using fallback animation mode');
+        console.error('[EyeContact] Failed to initialize webcam tracking:', error.message || error);
+        console.log('[EyeContact] ✓ Using FALLBACK animation mode (avatar will still move naturally)');
         eyeContactState.webcamActive = false;
+        eyeContactState.fallbackActive = true;
     }
 };
 
-// Cleanup function
+// Cleanup function - CRITICAL: Must fully release webcam
 const cleanupEyeContact = () => {
-    console.log('[EyeContact] Cleaning up webcam resources...');
+    console.log('[EyeContact] Starting webcam cleanup...');
 
-    // Stop camera
+    // Mark as not active immediately to stop any ongoing processing
+    eyeContactState.webcamActive = false;
+    eyeContactState.isProcessingFrame = false;
+
+    // Stop camera (MediaPipe Camera utility)
     if (eyeContactState.camera) {
-        eyeContactState.camera.stop();
+        try {
+            console.log('[EyeContact] Stopping MediaPipe camera...');
+            eyeContactState.camera.stop();
+        } catch (e) {
+            console.warn('[EyeContact] Camera stop error:', e);
+        }
         eyeContactState.camera = null;
     }
 
     // Close FaceMesh
     if (eyeContactState.faceMesh) {
-        eyeContactState.faceMesh.close();
+        try {
+            console.log('[EyeContact] Closing FaceMesh...');
+            eyeContactState.faceMesh.close();
+        } catch (e) {
+            console.warn('[EyeContact] FaceMesh close error:', e);
+        }
         eyeContactState.faceMesh = null;
     }
 
-    // Remove video element
+    // CRITICAL: Stop video element's srcObject stream tracks
+    // This is what actually releases the webcam and turns off the camera light
     if (eyeContactState.videoElement) {
-        eyeContactState.videoElement.remove();
+        try {
+            const stream = eyeContactState.videoElement.srcObject;
+            if (stream && stream.getTracks) {
+                const tracks = stream.getTracks();
+                console.log('[EyeContact] Stopping', tracks.length, 'video tracks...');
+                tracks.forEach(track => {
+                    console.log('[EyeContact] Stopping track:', track.kind, track.label, 'readyState:', track.readyState);
+                    track.stop();
+                });
+            }
+            eyeContactState.videoElement.srcObject = null;
+        } catch (e) {
+            console.warn('[EyeContact] Video stream stop error:', e);
+        }
+        
+        try {
+            // Pause and remove the video element
+            eyeContactState.videoElement.pause();
+            eyeContactState.videoElement.remove();
+        } catch (e) {
+            console.warn('[EyeContact] Video element remove error:', e);
+        }
         eyeContactState.videoElement = null;
     }
 
+    // Reset all state flags
     eyeContactState.initialized = false;
-    eyeContactState.webcamActive = false;
     eyeContactState.faceDetected = false;
     eyeContactState.time = 0;
 
-    console.log('[EyeContact] System cleaned up');
+    console.log('[EyeContact] ✓ Webcam cleanup complete - camera should be OFF');
 };
 
 // ===========================================
@@ -669,20 +745,27 @@ function GLBAvatar({ speaking, audioLevel, theme }) {
         const lipCfg = cfg.lipSync;
         const armCfg = cfg.armPose;
 
-        // Debug: Log once at initialization and every 5 seconds thereafter
+        // Debug: Log IMMEDIATELY on first run to confirm animation loop is active
         if (!s.loggedInit && bones.head) {
             s.loggedInit = true;
-            console.log('[GLBAvatar] ✓ Animation loop ACTIVE - Head bone:', !!bones.head,
-                'EyeContact:', eyeCfg.enabled, 'WebcamTracking:', eyeCfg.useWebcam);
+            console.log('[GLBAvatar] ✓✓✓ Animation loop ACTIVE - Head bone:', !!bones.head,
+                'Neck:', !!bones.neck, 'EyeContact enabled:', eyeCfg.enabled);
+            console.log('[GLBAvatar] Eye config values - Primary Yaw:', eyeCfg.primaryYaw,
+                'Primary Pitch:', eyeCfg.primaryPitch, 'Smoothing:', eyeCfg.smoothing);
+            // Force a test movement on first frame to confirm animation works
+            bones.head.rotation.y = 0.1;
+            console.log('[GLBAvatar] ✓ Test head rotation applied');
         }
 
-        if (s.time - s.lastLogTime > 5) {
+        if (s.time - s.lastLogTime > 3) {
             s.lastLogTime = s.time;
-            const mode = eyeContactState.webcamActive && eyeContactState.faceDetected ? 'WEBCAM' : 'FALLBACK';
-            console.log('[useFrame] Eye Contact Mode:', mode,
+            const mode = (eyeContactState.webcamActive && eyeContactState.faceDetected && !eyeContactState.fallbackActive)
+                ? 'WEBCAM'
+                : 'FALLBACK';
+            console.log('[useFrame] t=' + s.time.toFixed(1) + 's, Mode:', mode,
                 '| HeadYaw:', bones.head?.rotation.y.toFixed(3) || 'N/A',
                 '| HeadPitch:', bones.head?.rotation.x.toFixed(3) || 'N/A',
-                '| FacePos:', eyeContactState.facePosition?.x?.toFixed(2) || 'N/A');
+                '| FallbackActive:', eyeContactState.fallbackActive);
         }
 
         // Model position - head/shoulders only (arms cropped out)
@@ -735,8 +818,13 @@ function GLBAvatar({ speaking, audioLevel, theme }) {
             // =========================================
             // WEBCAM-BASED TRACKING (Primary)
             // Avatar follows user's face position from webcam
+            // Only used when webcam is active AND face is detected AND fallback is off
             // =========================================
-            if (eyeContactState.webcamActive && eyeContactState.faceDetected) {
+            const useWebcamTracking = eyeContactState.webcamActive &&
+                eyeContactState.faceDetected &&
+                !eyeContactState.fallbackActive;
+
+            if (useWebcamTracking) {
                 // Use face-tracking-based head rotation
                 targetYaw = eyeContactState.targetYaw;
                 targetPitch = eyeContactState.targetPitch;
@@ -1161,10 +1249,24 @@ export { initializeEyeContact, cleanupEyeContact };
 
 // Reset function to clear all eye contact state (call when interview ends)
 export const resetEyeContactState = () => {
+    console.log('[Avatar] Resetting eye contact state - releasing all camera resources...');
+    
+    // First cleanup any active webcam resources
     cleanupEyeContact();
+    
+    // Then reset all state flags
     eyeContactState.initialized = false;
     eyeContactState.time = 0;
-    console.log('[Avatar] Eye contact state fully reset');
+    eyeContactState.fallbackActive = true;  // Reset to fallback mode for next session
+    eyeContactState.initAttempts = 0;       // Reset attempt counter
+    eyeContactState.webcamActive = false;
+    eyeContactState.faceDetected = false;
+    eyeContactState.facePosition = { x: 0, y: 0 };
+    eyeContactState.targetYaw = 0;
+    eyeContactState.targetPitch = 0;
+    eyeContactState.isProcessingFrame = false;
+    
+    console.log('[Avatar] ✓ Eye contact state fully reset - camera should be OFF');
 };
 
 export default InterviewerAvatar;

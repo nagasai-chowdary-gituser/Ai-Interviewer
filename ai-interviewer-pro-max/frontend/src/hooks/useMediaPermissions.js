@@ -383,10 +383,12 @@ export default function useMediaPermissions() {
     // STOP ALL MEDIA
     // ===========================================
     const stopAllMedia = useCallback(() => {
+        console.log('[useMediaPermissions] Stopping all media streams...');
         stopFaceTracking();
 
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => {
+                console.log('[useMediaPermissions] Stopping track:', track.kind, track.label);
                 track.stop();
             });
         }
@@ -394,6 +396,7 @@ export default function useMediaPermissions() {
         setMediaStream(null);
         setHasVideoTrack(false);
         setHasAudioTrack(false);
+        console.log('[useMediaPermissions] ✓ All media streams stopped');
     }, [mediaStream, stopFaceTracking]);
 
     // Cleanup on unmount

@@ -10,10 +10,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Download, FileVideo, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { reportApi, getStoredUser } from '../services/api';
 import { updateWithReportData } from '../services/interviewStorage';
+import { getVideoBlob, deleteVideoBlob } from '../services/videoStorage';
 
 /**
  * Grade to color mapping
@@ -42,12 +44,104 @@ const LEVEL_LABELS = {
 function InterviewReport() {
     const { sessionId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const user = getStoredUser();
 
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState(null);
+
+    // Video download state - available for strict/stress interviews
+    const [videoData, setVideoData] = useState(null);
+    const [videoLoading, setVideoLoading] = useState(true);
+    const [downloadingVideo, setDownloadingVideo] = useState(false);
+
+    // Get interview personality from location state (passed from LiveInterview)
+    const interviewPersonality = location.state?.personality || location.state?.persona || 'neutral';
+
+    // Check if video download should be shown (strict or stress/high-pressure modes)
+    const showVideoDownload = ['strict', 'stress'].includes(interviewPersonality);
+
+    /**
+     * Load video from IndexedDB
+     */
+    useEffect(() => {
+        const loadVideo = async () => {
+            if (!sessionId || !showVideoDownload) {
+                setVideoLoading(false);
+                return;
+            }
+
+            setVideoLoading(true);
+            try {
+                const data = await getVideoBlob(sessionId);
+                if (data) {
+                    setVideoData(data);
+                    console.log('[InterviewReport] Video loaded:', {
+                        size: (data.size / 1024 / 1024).toFixed(2) + ' MB',
+                        mimeType: data.mimeType
+                    });
+                }
+            } catch (err) {
+                console.error('[InterviewReport] Error loading video:', err);
+            } finally {
+                setVideoLoading(false);
+            }
+        };
+
+        loadVideo();
+
+        // Cleanup blob URL on unmount
+        return () => {
+            if (videoData?.url) {
+                URL.revokeObjectURL(videoData.url);
+            }
+        };
+    }, [sessionId, showVideoDownload]);
+
+    /**
+     * Handle video download
+     */
+    const handleDownloadVideo = async () => {
+        if (!videoData?.url) return;
+
+        setDownloadingVideo(true);
+        try {
+            const a = document.createElement('a');
+            a.href = videoData.url;
+            a.download = `interview-${report?.target_role?.replace(/\s+/g, '_') || 'session'}-${sessionId}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            console.log('[InterviewReport] Video download initiated');
+        } catch (err) {
+            console.error('Failed to download video:', err);
+            alert('Failed to download video. Please try again.');
+        } finally {
+            setDownloadingVideo(false);
+        }
+    };
+
+    /**
+     * Handle video deletion
+     */
+    const handleDeleteVideo = async () => {
+        if (!confirm('Are you sure you want to delete this recording? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await deleteVideoBlob(sessionId);
+            if (videoData?.url) {
+                URL.revokeObjectURL(videoData.url);
+            }
+            setVideoData(null);
+            console.log('[InterviewReport] Video deleted');
+        } catch (err) {
+            console.error('Failed to delete video:', err);
+        }
+    };
 
     /**
      * Load or generate report
@@ -802,14 +896,84 @@ function InterviewReport() {
                     <p>{report.disclaimer}</p>
                 </section>
 
+                {/* Video Download Section - Only for Strict/High-Pressure interviews */}
+                {showVideoDownload && (
+                    <section className="video-download-section">
+                        <div className="video-download-card">
+                            <div className="video-info">
+                                <FileVideo size={32} />
+                                <div>
+                                    <h3>Interview Recording</h3>
+                                    {videoLoading ? (
+                                        <p className="video-status loading">
+                                            <Loader2 size={14} className="spin" /> Loading video...
+                                        </p>
+                                    ) : videoData ? (
+                                        <p className="video-status available">
+                                            ✓ Recording available ({(videoData.size / 1024 / 1024).toFixed(1)} MB)
+                                        </p>
+                                    ) : (
+                                        <p className="video-status unavailable">
+                                            <AlertCircle size={14} /> No recording available for this session
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="video-actions">
+                                {videoData && !videoLoading && (
+                                    <>
+                                        <button
+                                            className="btn-download-video"
+                                            onClick={handleDownloadVideo}
+                                            disabled={downloadingVideo}
+                                        >
+                                            {downloadingVideo ? (
+                                                <>
+                                                    <Loader2 size={18} className="spin" />
+                                                    Downloading...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download size={18} />
+                                                    Download Video
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            className="btn-delete-video"
+                                            onClick={handleDeleteVideo}
+                                            title="Delete recording to free space"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 {/* Actions */}
                 <div className="report-actions">
                     <button className="btn-secondary" onClick={downloadSummaryPDF}>
                         📄 Download Complete Report
                     </button>
-                    <button className="btn-secondary" onClick={downloadScoreReportPDF}>
-                        📊 Download Score Report
-                    </button>
+                    {/* Show Video Download for strict/stress interviews, Score Report for others */}
+                    {showVideoDownload ? (
+                        videoData && (
+                            <button
+                                className="btn-secondary btn-video-download"
+                                onClick={handleDownloadVideo}
+                                disabled={downloadingVideo || videoLoading}
+                            >
+                                🎬 {downloadingVideo ? 'Downloading...' : 'Download Interview Video'}
+                            </button>
+                        )
+                    ) : (
+                        <button className="btn-secondary" onClick={downloadScoreReportPDF}>
+                            📊 Download Score Report
+                        </button>
+                    )}
                     <button className="btn-secondary" onClick={() => navigate('/history')}>
                         View All Reports
                     </button>

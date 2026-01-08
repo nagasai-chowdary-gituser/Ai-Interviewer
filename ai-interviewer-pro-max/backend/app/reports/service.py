@@ -126,18 +126,20 @@ class ReportService:
         
         for e in evaluations:
             if e.is_deep_complete:
-                relevance_scores.append(max(0, min(10, e.deep_relevance_score or 5)))
-                depth_scores.append(max(0, min(10, e.deep_depth_score or 5)))
-                clarity_scores.append(max(0, min(10, e.deep_clarity_score or 5)))
-                confidence_scores.append(max(0, min(10, e.deep_confidence_score or 5)))
+                # Use actual scores, default to LOW (2) if missing = penalize unknowns
+                relevance_scores.append(max(0, min(10, e.deep_relevance_score or 2)))
+                depth_scores.append(max(0, min(10, e.deep_depth_score or 2)))
+                clarity_scores.append(max(0, min(10, e.deep_clarity_score or 2)))
+                confidence_scores.append(max(0, min(10, e.deep_confidence_score or 2)))
             elif e.is_quick_complete:
-                relevance_scores.append(max(0, min(10, e.quick_relevance_score or 5)))
+                # Quick eval only has relevance - default LOW
+                relevance_scores.append(max(0, min(10, e.quick_relevance_score or 2)))
         
-        # Calculate averages (default 5 if no scores)
-        avg_relevance = sum(relevance_scores) / len(relevance_scores) if relevance_scores else 5
-        avg_depth = sum(depth_scores) / len(depth_scores) if depth_scores else 5
-        avg_clarity = sum(clarity_scores) / len(clarity_scores) if clarity_scores else 5
-        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 5
+        # Calculate averages - DEFAULT TO LOW (2) if no scores = penalize unanswered
+        avg_relevance = sum(relevance_scores) / len(relevance_scores) if relevance_scores else 2
+        avg_depth = sum(depth_scores) / len(depth_scores) if depth_scores else 2
+        avg_clarity = sum(clarity_scores) / len(clarity_scores) if clarity_scores else 2
+        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 2
         
         # Calculate overall (weighted) - result is on 0-10 scale
         overall = (
@@ -171,8 +173,9 @@ class ReportService:
         Returns scores on 0-10 scale.
         """
         if not insights:
-            # Default score on 0-10 scale (5 = average)
-            return {"overall": 5, "breakdown": {}}
+            # DEFAULT TO VERY LOW (1.5/10 = 15%) when no behavioral data
+            # This prevents inflating scores just because we couldn't analyze
+            return {"overall": 1.5, "breakdown": {}}
         
         # Aggregate confidence scores (clamp to 0-1)
         confidence_scores = [max(0, min(1, i.confidence_score or 0.5)) for i in insights if i.confidence_score is not None]
@@ -209,49 +212,87 @@ class ReportService:
         technical: Dict[str, Any],
         behavioral: Dict[str, Any],
         completion_rate: float,
+        skipped_count: int = 0,
+        total_questions: int = 1,
     ) -> int:
         """
         Calculate final readiness score (0-100).
         
+        UNBIASED SCORING ALGORITHM (Fixed in V1.1):
+        - Technical performance carries the most weight (70%)
+        - Behavioral is inferred from text only, so lower weight (15%)
+        - Completion rate is a minor factor (10%)
+        - Skip penalty applied for skipped questions (5% weight as penalty)
+        
         IMPORTANT: This method ALWAYS returns a value between 0-100.
-        The score is clamped after calculation to prevent Pydantic validation errors.
         """
-        # Weights
-        technical_weight = 0.60
-        behavioral_weight = 0.25
-        completion_weight = 0.15
+        # ===========================================
+        # WEIGHT DISTRIBUTION (UNBIASED - Technical Dominant)
+        # ===========================================
+        # Technical: 70% - The PRIMARY indicator of interview readiness
+        # Behavioral: 15% - Text-inferred only, not reliable, reduced weight
+        # Completion: 10% - Minor bonus for completing questions
+        # Skip Penalty: 5% - Deduction for skipped questions
         
-        # Get raw scores (these are on 0-10 scale)
-        raw_technical = technical.get("overall", 5)
-        raw_behavioral = behavioral.get("overall", 5)
-        raw_completion = completion_rate  # This is 0-1 scale
+        TECHNICAL_WEIGHT = 0.70
+        BEHAVIORAL_WEIGHT = 0.15
+        COMPLETION_WEIGHT = 0.10
+        SKIP_PENALTY_WEIGHT = 0.05
         
-        # Clamp raw scores to their expected ranges FIRST
+        # ===========================================
+        # GET RAW SCORES (Pre-validation)
+        # DEFAULTS ARE LOW to penalize missing/bad answers
+        # ===========================================
+        raw_technical = technical.get("overall", 2)   # Default LOW (2/10 = 20%)
+        raw_behavioral = behavioral.get("overall", 1.5)  # Default VERY LOW (1.5/10 = 15%)
+        raw_completion = completion_rate
+        
+        # ===========================================
+        # CLAMP TO EXPECTED RANGES
+        # ===========================================
         raw_technical = max(0, min(10, raw_technical))
         raw_behavioral = max(0, min(10, raw_behavioral))
         raw_completion = max(0, min(1, raw_completion))
         
-        # Normalize scores to 0-100
+        # ===========================================
+        # NORMALIZE ALL SCORES TO 0-100
+        # ===========================================
         technical_normalized = raw_technical * 10  # 0-10 -> 0-100
         behavioral_normalized = raw_behavioral * 10  # 0-10 -> 0-100
         completion_normalized = raw_completion * 100  # 0-1 -> 0-100
         
-        # Calculate weighted score (raw value before clamping)
+        # ===========================================
+        # SKIP PENALTY CALCULATION
+        # Skipping questions indicates lack of readiness
+        # ===========================================
+        skip_rate = skipped_count / total_questions if total_questions > 0 else 0
+        skip_penalty = skip_rate * 100  # 0-100 scale (higher = more skipped = worse)
+        skip_deduction = skip_penalty * SKIP_PENALTY_WEIGHT  # This will be subtracted
+        
+        # ===========================================
+        # CALCULATE WEIGHTED SCORE
+        # ===========================================
         raw_score = (
-            technical_normalized * technical_weight +
-            behavioral_normalized * behavioral_weight +
-            completion_normalized * completion_weight
-        )
+            technical_normalized * TECHNICAL_WEIGHT +
+            behavioral_normalized * BEHAVIORAL_WEIGHT +
+            completion_normalized * COMPLETION_WEIGHT
+        ) - skip_deduction
         
-        # DEFENSIVE CLAMP: Ensure final score is strictly 0-100
-        normalized_score = max(0, min(100, round(raw_score)))
+        # ===========================================
+        # FINAL CLAMP: Ensure 0-100 range
+        # ===========================================
+        final_score = max(0, min(100, round(raw_score)))
         
-        # Log for debugging (only if there was overflow)
-        if raw_score != normalized_score:
-            print(f"[SCORE] Clamped readiness score: raw={raw_score:.1f} -> normalized={normalized_score}")
-            print(f"[SCORE] Components: tech={raw_technical}, beh={raw_behavioral}, comp={raw_completion:.2f}")
+        # ===========================================
+        # DEBUG LOGGING (For transparency)
+        # ===========================================
+        print(f"[SCORE CALC] Technical: {raw_technical:.1f}/10 (weight: {TECHNICAL_WEIGHT*100:.0f}%)")
+        print(f"[SCORE CALC] Behavioral: {raw_behavioral:.1f}/10 (weight: {BEHAVIORAL_WEIGHT*100:.0f}%)")
+        print(f"[SCORE CALC] Completion: {raw_completion*100:.1f}% (weight: {COMPLETION_WEIGHT*100:.0f}%)")
+        print(f"[SCORE CALC] Skip penalty: {skip_deduction:.1f} (skipped: {skipped_count}/{total_questions})")
+        print(f"[SCORE CALC] Final Score: {final_score}/100")
         
-        return normalized_score
+        return final_score
     
     # ===========================================
     # INSIGHT GENERATION
@@ -656,9 +697,9 @@ Be professional, constructive, and specific. Avoid vague praise."""
             recommendation = "Requires additional preparation. Focus on fundamentals and practice extensively."
         
         explanation = (
-            f"The readiness score is calculated from technical performance ({int(technical.get('overall', 5) * 10)}% weight: 60%), "
-            f"communication patterns ({int(behavioral.get('overall', 5) * 10)}% weight: 25%), "
-            f"and interview completion (weight: 15%)."
+            f"The readiness score is calculated from technical performance ({int(technical.get('overall', 5) * 10)}% weight: 70%), "
+            f"communication patterns ({int(behavioral.get('overall', 3) * 10)}% weight: 15%), "
+            f"interview completion (weight: 10%), minus any skip penalty (weight: 5%)."
         )
         
         behavioral_narrative = "Based on text analysis, the candidate's communication style was generally clear. " \
@@ -713,11 +754,14 @@ Be professional, constructive, and specific. Avoid vague praise."""
         answered = session.questions_answered or 0
         completion_rate = answered / total_q if total_q > 0 else 0
         
-        # Calculate readiness score
+        # Calculate readiness score (UNBIASED V1.1)
+        skipped = session.questions_skipped or 0
         readiness_score = self._calculate_readiness_score(
             technical_scores,
             behavioral_scores,
-            completion_rate
+            completion_rate,
+            skipped_count=skipped,
+            total_questions=total_q
         )
         
         # Generate insights
@@ -933,8 +977,11 @@ Be professional, constructive, and specific. Avoid vague praise."""
         skipped = session.questions_skipped or 0
         completion_rate = answered / total_q if total_q > 0 else 0
         
-        # Compute a basic score based on completion
-        basic_score = int(completion_rate * 60) + 20  # 20-80 range based on completion
+        # Compute a basic score based on completion (UNBIASED V1.1)
+        # Technical: Not available in fallback, so use completion as proxy
+        # Skip penalty: Applied to discourage skipping
+        skip_penalty_rate = skipped / total_q if total_q > 0 else 0
+        basic_score = int(completion_rate * 70) - int(skip_penalty_rate * 10)  # Max 70, with skip penalty
         basic_score = max(0, min(100, basic_score))
         
         # Create minimal report
